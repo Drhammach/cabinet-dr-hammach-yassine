@@ -68,12 +68,6 @@ const statusOptions = [
     { value: "termine", label: "Terminé" },
 ];
 
-const waitingRoomOptions = [
-    { value: "salle_attente", label: "Salle d'attente" },
-    { value: "en_consultation", label: "En consultation" },
-    { value: "sorti", label: "Sorti" },
-];
-
 const appointmentStatusOptions = [
     { value: "planifie", label: "Planifié" },
     { value: "honore", label: "Honoré" },
@@ -114,12 +108,6 @@ const emptyAppointment = {
     notes: "",
 };
 
-const emptyWaitingRoom = {
-    patientName: "",
-    phone: "",
-    reason: "",
-};
-
 function badgeColor(level) {
     if (level === "rouge") return "bg-red-100 text-red-800 border-red-200";
     if (level === "orange") return "bg-amber-100 text-amber-800 border-amber-200";
@@ -130,12 +118,6 @@ function statusColor(status) {
     if (status === "termine") return "bg-slate-100 text-slate-800 border-slate-200";
     if (status === "vu") return "bg-blue-100 text-blue-800 border-blue-200";
     return "bg-violet-100 text-violet-800 border-violet-200";
-}
-
-function waitingRoomColor(status) {
-    if (status === "sorti") return "bg-slate-100 text-slate-800 border-slate-200";
-    if (status === "en_consultation") return "bg-blue-100 text-blue-800 border-blue-200";
-    return "bg-emerald-100 text-emerald-800 border-emerald-200";
 }
 
 function appointmentColor(status) {
@@ -162,10 +144,7 @@ function computeClinicalSummary(form) {
     const fc = Number(form.fc || 0);
     const age = Number(form.age || 0);
     const pas = parseSystolic(form.ta);
-    const has = (v) =>
-        (form.associated || []).includes(v) ||
-        (form.risks || []).includes(v) ||
-        form.mainSymptom === v;
+    const has = (v) => (form.associated || []).includes(v) || (form.risks || []).includes(v) || form.mainSymptom === v;
 
     if (spo2 > 0 && spo2 < 94) {
         alerts.push("SpO₂ < 94 % : évaluer urgence respiratoire ou cardiovasculaire");
@@ -186,13 +165,7 @@ function computeClinicalSummary(form) {
 
     switch (form.mainSymptom) {
         case "Douleur thoracique": {
-            if (
-                has("Douleur irradiant bras gauche") ||
-                has("Douleur à l'effort") ||
-                has("HTA") ||
-                has("Tabac") ||
-                has("Antécédent cardiaque")
-            ) {
+            if (has("Douleur irradiant bras gauche") || has("Douleur à l'effort") || has("HTA") || has("Tabac") || has("Antécédent cardiaque")) {
                 diagnoses.push({ label: "Syndrome coronarien aigu", score: 95 });
                 diagnoses.push({ label: "Angor instable", score: 82 });
                 diagnoses.push({ label: "Douleur pariétale thoracique", score: 28 });
@@ -218,7 +191,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Dyspnée": {
             if (has("Crépitants") || has("Insuffisance cardiaque")) {
                 diagnoses.push({ label: "Œdème aigu pulmonaire", score: 90 });
@@ -241,7 +213,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Douleur abdominale": {
             if (has("Douleur fosse iliaque droite") && (temp >= 38 || has("Défense abdominale"))) {
                 diagnoses.push({ label: "Appendicite aiguë", score: 92 });
@@ -267,7 +238,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Vertiges": {
             if (has("Déficit neurologique") || age >= 60) {
                 diagnoses.push({ label: "AVC cérébelleux / postérieur", score: 82 });
@@ -285,7 +255,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Brûlures urinaires": {
             if (temp >= 38 || has("Douleur lombaire") || has("Frissons")) {
                 diagnoses.push({ label: "Pyélonéphrite", score: 90 });
@@ -303,7 +272,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Fièvre": {
             diagnoses.push({ label: "Infection virale", score: 55 });
             diagnoses.push({ label: "Infection urinaire", score: has("Brûlures urinaires") ? 70 : 25 });
@@ -317,7 +285,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Douleur lombaire": {
             diagnoses.push({ label: "Lombosciatique", score: 75 });
             diagnoses.push({ label: "Lombalgie mécanique", score: 70 });
@@ -326,12 +293,8 @@ function computeClinicalSummary(form) {
             actions.add("Rechercher rétention urinaire, anesthésie en selle, déficit moteur");
             break;
         }
-
         case "Douleur mollet": {
-            diagnoses.push({
-                label: "Thrombose veineuse profonde",
-                score: has("Voyage prolongé récent") || has("Douleur mollet unilatérale") ? 90 : 60,
-            });
+            diagnoses.push({ label: "Thrombose veineuse profonde", score: has("Voyage prolongé récent") || has("Douleur mollet unilatérale") ? 90 : 60 });
             diagnoses.push({ label: "Contracture musculaire", score: 40 });
             diagnoses.push({ label: "Kyste poplité", score: 20 });
             exams.add("Score de Wells");
@@ -340,7 +303,6 @@ function computeClinicalSummary(form) {
             if (priority !== "rouge") priority = "orange";
             break;
         }
-
         case "Palpitations": {
             diagnoses.push({ label: "Tachycardie sinusale", score: 70 });
             diagnoses.push({ label: "TSV / trouble du rythme", score: 60 });
@@ -355,15 +317,14 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Douleur pelvienne": {
             if (has("Grossesse possible") || has("Saignement vaginal")) {
                 diagnoses.push({ label: "Grossesse extra-utérine", score: 92 });
                 diagnoses.push({ label: "Fausse couche", score: 50 });
                 diagnoses.push({ label: "Kyste ovarien", score: 45 });
                 exams.add("β-HCG");
-                exams.add("Échographie pelvienne");
                 actions.add("Orientation urgente si douleur intense, malaise, hypotension ou saignement important");
+                exams.add("Échographie pelvienne");
                 priority = "rouge";
             } else {
                 diagnoses.push({ label: "Kyste ovarien", score: 60 });
@@ -373,7 +334,6 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         case "Céphalée": {
             diagnoses.push({ label: "Migraine", score: 60 });
             diagnoses.push({ label: "Céphalée de tension", score: 55 });
@@ -385,13 +345,11 @@ function computeClinicalSummary(form) {
             }
             break;
         }
-
         default:
             diagnoses.push({ label: "À orienter par l'examen clinique", score: 50 });
     }
 
     diagnoses.sort((a, b) => b.score - a.score);
-
     return {
         priority,
         alerts: [...new Set(alerts)],
@@ -420,43 +378,12 @@ function generateManagementSuggestions(selectedRecord) {
             "Ne pas laisser repartir le patient",
             "Orientation urgente / service d'urgence selon organisation locale",
         ],
-        "Angor instable": [
-            "ECG et évaluation cardiovasculaire urgente",
-            "Repos, surveillance clinique et orientation urgente si douleur persistante",
-            "Ne pas banaliser une douleur thoracique chez patient à risque",
-        ],
         "Appendicite aiguë": [
             "Confirmer par examen abdominal ciblé et biologie / imagerie selon disponibilité",
             "Ne pas laisser rentrer si défense, aggravation ou tableau évocateur franc",
             "Orientation chirurgicale / urgences si suspicion forte",
         ],
-        "Occlusion intestinale": [
-            "Mettre à jeun et adresser en urgence",
-            "Évaluer vomissements, douleur, arrêt des matières et gaz",
-            "Scanner abdomino-pelvien si circuit local le permet rapidement",
-        ],
-        "Œdème aigu pulmonaire": [
-            "Installer le patient assis et monitorer la saturation",
-            "Oxygène si désaturation et prise en charge urgente",
-            "Orientation urgente sans délai",
-        ],
-        "Grossesse extra-utérine": [
-            "Faire β-HCG + échographie pelvienne en urgence",
-            "Rechercher saignement, douleur importante, malaise ou instabilité",
-            "Orientation gynécologique urgente",
-        ],
-        "Thrombose veineuse profonde": [
-            "Évaluer score de Wells et rechercher signes d'embolie pulmonaire",
-            "Demander écho-doppler veineux rapidement",
-            "Orienter selon contexte et évaluation du risque thromboembolique",
-        ],
-        "Lombosciatique": [
-            "Faire examen neurologique complet des membres inférieurs",
-            "Rechercher syndrome de la queue de cheval ou déficit moteur",
-            "Traitement symptomatique et réévaluation si persistance ou aggravation",
-        ],
     };
-
     return (
         plans[topDx] || [
             "Vérifier les diagnostics différentiels et les red flags",
@@ -469,7 +396,6 @@ function generateManagementSuggestions(selectedRecord) {
 function generatePrescriptionSuggestions(selectedRecord) {
     if (!selectedRecord) return [];
     const topDx = selectedRecord.diagnoses?.[0]?.label || "";
-
     const suggestions = {
         "Cystite simple": [
             "BU immédiate si non faite",
@@ -486,33 +412,7 @@ function generatePrescriptionSuggestions(selectedRecord) {
             "Orientation urgente / service d'urgence",
             "Ne pas laisser repartir le patient",
         ],
-        "Appendicite aiguë": [
-            "NFS + CRP",
-            "Échographie / scanner selon disponibilité",
-            "Orientation chirurgicale si tableau compatible",
-        ],
-        "Œdème aigu pulmonaire": [
-            "Position assise",
-            "Oxygène si SpO₂ basse",
-            "Prise en charge urgente immédiate",
-        ],
-        "Grossesse extra-utérine": [
-            "β-HCG + échographie pelvienne",
-            "Voie veineuse / évaluation hémodynamique si gravité",
-            "Orientation gynécologique urgente",
-        ],
-        "Thrombose veineuse profonde": [
-            "Score de Wells",
-            "Écho-doppler veineux",
-            "Évaluer embolie pulmonaire associée",
-        ],
-        "Lombosciatique": [
-            "Traitement symptomatique selon protocole du cabinet",
-            "Repos relatif, éviter immobilisation prolongée",
-            "Réévaluation si déficit neurologique ou douleur rebelle",
-        ],
     };
-
     return (
         suggestions[topDx] || [
             "Mesure thérapeutique à adapter au diagnostic retenu",
@@ -572,6 +472,63 @@ function SearchInput({ value, onChange, placeholder = "Rechercher..." }) {
     );
 }
 
+function AgendaView({ appointments, onStatusChange }) {
+    const grouped = appointments.reduce((acc, appt) => {
+        const key = appt.appointment_date || "Sans date";
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(appt);
+        return acc;
+    }, {});
+
+    const orderedDates = Object.keys(grouped).sort();
+
+    return (
+        <div className="space-y-4">
+            {orderedDates.length ? (
+                orderedDates.map((date) => (
+                    <div key={date} className="rounded-2xl border border-slate-200 p-4">
+                        <div className="text-sm font-semibold text-slate-900">{date === "Sans date" ? "Sans date" : date}</div>
+                        <div className="mt-3 space-y-3">
+                            {grouped[date]
+                                .sort((a, b) => String(a.appointment_time || "").localeCompare(String(b.appointment_time || "")))
+                                .map((a) => (
+                                    <div key={a.id} className="rounded-xl border border-slate-100 p-3">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <div className="font-medium text-slate-900">{a.appointment_time || "--:--"} · {a.patient_name}</div>
+                                                <div className="mt-1 text-sm text-slate-600">{a.phone || "-"}</div>
+                                                <div className="mt-1 text-sm text-slate-600">{a.reason || "-"}</div>
+                                            </div>
+                                            <span className={`rounded-full border px-2.5 py-1 text-xs ${appointmentColor(a.status || "planifie")}`}>
+                                                {(appointmentStatusOptions.find((s) => s.value === a.status)?.label) || "Planifié"}
+                                            </span>
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {appointmentStatusOptions.map((s) => (
+                                                <button
+                                                    key={s.value}
+                                                    onClick={() => onStatusChange(a.id, s.value)}
+                                                    className={`rounded-xl border px-3 py-2 text-xs ${a.status === s.value ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-300 text-slate-700"
+                                                        }`}
+                                                >
+                                                    {s.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                    Aucun rendez-vous.
+                </div>
+            )}
+        </div>
+    );
+}
+
 function LoginScreen({ onLogin }) {
     const [role, setRole] = useState("assistante");
     const [pin, setPin] = useState("");
@@ -591,44 +548,21 @@ function LoginScreen({ onLogin }) {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
             <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h1 className="text-2xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                <p className="mt-2 text-sm text-slate-600">
-                    V6 — consultation, RDV, salle d'attente et fiches patients
-                </p>
-
+                <p className="mt-2 text-sm text-slate-600">Connexion cabinet</p>
                 <div className="mt-6 space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Rôle</label>
-                        <select
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                        >
+                        <select className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
                             <option value="assistante">Assistante</option>
                             <option value="medecin">Médecin</option>
                         </select>
                     </div>
-
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Code PIN</label>
-                        <input
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                            type="password"
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value)}
-                            placeholder="Code PIN"
-                        />
+                        <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Code PIN" />
                     </div>
-
-                    {error ? (
-                        <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-                    ) : null}
-
-                    <button
-                        className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white"
-                        onClick={submit}
-                    >
-                        Se connecter
-                    </button>
+                    {error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+                    <button className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white" onClick={submit}>Se connecter</button>
                 </div>
             </div>
         </div>
@@ -637,76 +571,47 @@ function LoginScreen({ onLogin }) {
 
 function PatientCard({ p, onOpen, canSeeClinical }) {
     return (
-        <button
-            onClick={() => onOpen(p.id)}
-            className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300"
-        >
+        <button onClick={() => onOpen(p.id)} className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <div className="font-medium text-slate-900">{p.patient_name || "Patient sans nom"}</div>
-                    <div className="mt-1 text-sm text-slate-600">
-                        {p.patient_age || "?"} ans · {p.patient_sex || "-"} · {p.main_symptom}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                        {new Date(p.created_at).toLocaleString("fr-FR")}
-                    </div>
+                    <div className="mt-1 text-sm text-slate-600">{p.patient_age || "?"} ans · {p.patient_sex || "-"} · {p.main_symptom}</div>
+                    <div className="mt-1 text-xs text-slate-500">{new Date(p.created_at).toLocaleString("fr-FR")}</div>
                 </div>
-
                 <div className="flex flex-col items-end gap-2">
-                    <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(p.status || "en_attente")}`}>
-                        {(statusOptions.find((s) => s.value === p.status)?.label) || "En attente"}
-                    </span>
-                    <span className={`rounded-full border px-2.5 py-1 text-xs ${badgeColor(p.priority || "verte")}`}>
-                        {p.priority || "verte"}
-                    </span>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(p.status || "en_attente")}`}>{(statusOptions.find((s) => s.value === p.status)?.label) || "En attente"}</span>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs ${badgeColor(p.priority || "verte")}`}>{p.priority || "verte"}</span>
                 </div>
             </div>
-
-            <div className="mt-3 text-sm text-slate-700">
-                {canSeeClinical ? p.diagnoses?.[0]?.label || "Aucun diagnostic" : "Fiche patient"}
-            </div>
+            <div className="mt-3 text-sm text-slate-700">{canSeeClinical ? p.diagnoses?.[0]?.label || "Aucun diagnostic" : "Fiche patient"}</div>
         </button>
     );
 }
 
-export default function CabinetDrHammachYassineV6() {
+export default function CabinetDrHammachYassineV61() {
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState("consultation");
-
     const [form, setForm] = useState(emptyForm);
     const [records, setRecords] = useState([]);
     const [selectedRecordId, setSelectedRecordId] = useState(null);
-
+    const [patients, setPatients] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [appointmentForm, setAppointmentForm] = useState(emptyAppointment);
-
     const [waitingRoom, setWaitingRoom] = useState([]);
-    const [waitingRoomForm, setWaitingRoomForm] = useState(emptyWaitingRoom);
-
-    const [patients, setPatients] = useState([]);
-
     const [loading, setLoading] = useState(false);
-    const [savingDoctorNotes, setSavingDoctorNotes] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-
     const [searchRecords, setSearchRecords] = useState("");
     const [searchPatients, setSearchPatients] = useState("");
     const [searchAppointments, setSearchAppointments] = useState("");
     const [searchWaitingRoom, setSearchWaitingRoom] = useState("");
-
     const [doctorNotesDraft, setDoctorNotesDraft] = useState("");
+    const [savingDoctorNotes, setSavingDoctorNotes] = useState(false);
 
     const section = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
     const label = "mb-1 block text-sm font-medium text-slate-700";
-    const input =
-        "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
-
+    const input = "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
     const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-    const updateAppointment = (key, value) =>
-        setAppointmentForm((prev) => ({ ...prev, [key]: value }));
-    const updateWaitingRoom = (key, value) =>
-        setWaitingRoomForm((prev) => ({ ...prev, [key]: value }));
-
+    const updateAppointment = (key, value) => setAppointmentForm((prev) => ({ ...prev, [key]: value }));
     const summary = useMemo(() => computeClinicalSummary(form), [form]);
     const isDoctor = user?.role === "medecin";
 
@@ -772,31 +677,19 @@ export default function CabinetDrHammachYassineV6() {
 
     const loadPatients = async () => {
         if (!supabase) return;
-        const { data, error } = await supabase
-            .from("patients")
-            .select("*")
-            .order("created_at", { ascending: false });
-
+        const { data, error } = await supabase.from("patients").select("*").order("created_at", { ascending: false });
         if (!error) setPatients(data || []);
     };
 
     const loadAppointments = async () => {
         if (!supabase) return;
-        const { data, error } = await supabase
-            .from("appointments")
-            .select("*")
-            .order("created_at", { ascending: false });
-
+        const { data, error } = await supabase.from("appointments").select("*").order("appointment_date", { ascending: true });
         if (!error) setAppointments(data || []);
     };
 
     const loadWaitingRoom = async () => {
         if (!supabase) return;
-        const { data, error } = await supabase
-            .from("waiting_room")
-            .select("*")
-            .order("created_at", { ascending: false });
-
+        const { data, error } = await supabase.from("waiting_room").select("*").order("created_at", { ascending: false });
         if (!error) setWaitingRoom(data || []);
     };
 
@@ -807,179 +700,115 @@ export default function CabinetDrHammachYassineV6() {
     };
 
     useEffect(() => {
-        if (user) {
-            setActiveTab(user.role === "medecin" ? "consultation" : "consultation");
-        }
-    }, [user]);
-
-    useEffect(() => {
         loadAll();
         const interval = setInterval(loadAll, 4000);
         return () => clearInterval(interval);
     }, []);
 
-    const selectedRecord = useMemo(
-        () => records.find((r) => r.id === selectedRecordId) || null,
-        [records, selectedRecordId]
-    );
+    useEffect(() => {
+        if (user) setActiveTab("consultation");
+    }, [user]);
 
+    const selectedRecord = useMemo(() => records.find((r) => r.id === selectedRecordId) || null, [records, selectedRecordId]);
     useEffect(() => {
         setDoctorNotesDraft(selectedRecord?.doctor_notes || "");
     }, [selectedRecordId, selectedRecord?.doctor_notes]);
 
-    const managementSuggestions = useMemo(
-        () => generateManagementSuggestions(selectedRecord),
-        [selectedRecord]
-    );
-    const therapeuticSuggestions = useMemo(
-        () => generatePrescriptionSuggestions(selectedRecord),
-        [selectedRecord]
-    );
+    const managementSuggestions = useMemo(() => generateManagementSuggestions(selectedRecord), [selectedRecord]);
+    const therapeuticSuggestions = useMemo(() => generatePrescriptionSuggestions(selectedRecord), [selectedRecord]);
 
     const filteredRecords = useMemo(() => {
         const q = searchRecords.trim().toLowerCase();
         if (!q) return records;
-        return records.filter((r) =>
-            [r.patient_name, r.patient_phone, r.main_symptom]
-                .filter(Boolean)
-                .some((v) => String(v).toLowerCase().includes(q))
-        );
+        return records.filter((r) => [r.patient_name, r.patient_phone, r.main_symptom].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
     }, [records, searchRecords]);
 
     const filteredPatients = useMemo(() => {
         const q = searchPatients.trim().toLowerCase();
         if (!q) return patients;
-        return patients.filter((p) =>
-            [p.full_name, p.phone]
-                .filter(Boolean)
-                .some((v) => String(v).toLowerCase().includes(q))
-        );
+        return patients.filter((p) => [p.full_name, p.phone].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
     }, [patients, searchPatients]);
 
     const filteredAppointments = useMemo(() => {
         const q = searchAppointments.trim().toLowerCase();
         if (!q) return appointments;
-        return appointments.filter((a) =>
-            [a.patient_name, a.phone, a.reason]
-                .filter(Boolean)
-                .some((v) => String(v).toLowerCase().includes(q))
-        );
+        return appointments.filter((a) => [a.patient_name, a.phone, a.reason].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
     }, [appointments, searchAppointments]);
 
     const filteredWaitingRoom = useMemo(() => {
         const q = searchWaitingRoom.trim().toLowerCase();
         if (!q) return waitingRoom;
-        return waitingRoom.filter((w) =>
-            [w.patient_name, w.phone, w.reason]
-                .filter(Boolean)
-                .some((v) => String(v).toLowerCase().includes(q))
-        );
+        return waitingRoom.filter((w) => [w.patient_name, w.phone, w.reason].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
     }, [waitingRoom, searchWaitingRoom]);
 
+    const todaysPatients = useMemo(() => {
+        const today = new Date().toLocaleDateString("en-CA");
+        return records.filter((r) => r.created_at && new Date(r.created_at).toLocaleDateString("en-CA") === today);
+    }, [records]);
+
     const findOrCreatePatient = async () => {
-        if (!supabase) return null;
         const phone = (form.phone || "").trim();
         const fullName = (form.fullName || "").trim();
-
         if (phone) {
-            const { data: existingByPhone } = await supabase
-                .from("patients")
-                .select("id, full_name, age, sex, phone")
-                .eq("phone", phone)
-                .limit(1)
-                .maybeSingle();
-
+            const { data: existingByPhone } = await supabase.from("patients").select("id, full_name, age, sex, phone").eq("phone", phone).limit(1).maybeSingle();
             if (existingByPhone) {
-                await supabase
-                    .from("patients")
-                    .update({
-                        full_name: fullName || existingByPhone.full_name,
-                        age: form.age ? Number(form.age) : existingByPhone.age,
-                        sex: form.sex || existingByPhone.sex,
-                    })
-                    .eq("id", existingByPhone.id);
+                await supabase.from("patients").update({ full_name: fullName || existingByPhone.full_name, age: form.age ? Number(form.age) : existingByPhone.age, sex: form.sex || existingByPhone.sex }).eq("id", existingByPhone.id);
                 return existingByPhone.id;
             }
         }
-
         if (fullName) {
-            const { data: existingByName } = await supabase
-                .from("patients")
-                .select("id")
-                .ilike("full_name", fullName)
-                .limit(1)
-                .maybeSingle();
-
+            const { data: existingByName } = await supabase.from("patients").select("id").ilike("full_name", fullName).limit(1).maybeSingle();
             if (existingByName) {
-                await supabase
-                    .from("patients")
-                    .update({
-                        age: form.age ? Number(form.age) : null,
-                        sex: form.sex,
-                        phone: phone || null,
-                    })
-                    .eq("id", existingByName.id);
+                await supabase.from("patients").update({ age: form.age ? Number(form.age) : null, sex: form.sex, phone: phone || null }).eq("id", existingByName.id);
                 return existingByName.id;
             }
         }
-
-        const { data: patient, error: patientError } = await supabase
-            .from("patients")
-            .insert({
-                full_name: fullName,
-                age: form.age ? Number(form.age) : null,
-                sex: form.sex,
-                phone: phone || null,
-            })
-            .select()
-            .single();
-
-        if (patientError) throw patientError;
+        const { data: patient, error } = await supabase.from("patients").insert({ full_name: fullName, age: form.age ? Number(form.age) : null, sex: form.sex, phone: phone || null }).select().single();
+        if (error) throw error;
         return patient.id;
     };
 
     const saveRecord = async () => {
-        if (!supabase) {
-            alert("Variables Supabase manquantes");
-            return;
-        }
-
+        if (!supabase) return;
         try {
             setLoading(true);
             const patientId = await findOrCreatePatient();
             const clinical = computeClinicalSummary(form);
+            const { data: triage, error } = await supabase.from("triage_forms").insert({
+                patient_id: patientId,
+                created_by: user?.name || "Assistante",
+                status: "en_attente",
+                doctor_notes: "",
+                seen_by_doctor_at: null,
+                main_symptom: form.mainSymptom,
+                onset: form.onset,
+                duration: form.duration,
+                pain_scale: form.painScale ? Number(form.painScale) : null,
+                ta: form.ta,
+                fc: form.fc ? Number(form.fc) : null,
+                spo2: form.spo2 ? Number(form.spo2) : null,
+                temperature: form.temperature ? Number(form.temperature) : null,
+                fr: form.fr ? Number(form.fr) : null,
+                glycemia: form.glycemia,
+                associated: form.associated,
+                risks: form.risks,
+                notes: form.notes,
+                priority: clinical.priority,
+                alerts: clinical.alerts,
+                diagnoses: clinical.diagnoses,
+                exams: clinical.exams,
+                actions: clinical.actions,
+            }).select().single();
+            if (error) throw error;
 
-            const { data: triage, error: triageError } = await supabase
-                .from("triage_forms")
-                .insert({
-                    patient_id: patientId,
-                    created_by: user?.name || "Assistante",
-                    status: "en_attente",
-                    doctor_notes: "",
-                    seen_by_doctor_at: null,
-                    main_symptom: form.mainSymptom,
-                    onset: form.onset,
-                    duration: form.duration,
-                    pain_scale: form.painScale ? Number(form.painScale) : null,
-                    ta: form.ta,
-                    fc: form.fc ? Number(form.fc) : null,
-                    spo2: form.spo2 ? Number(form.spo2) : null,
-                    temperature: form.temperature ? Number(form.temperature) : null,
-                    fr: form.fr ? Number(form.fr) : null,
-                    glycemia: form.glycemia,
-                    associated: form.associated,
-                    risks: form.risks,
-                    notes: form.notes,
-                    priority: clinical.priority,
-                    alerts: clinical.alerts,
-                    diagnoses: clinical.diagnoses,
-                    exams: clinical.exams,
-                    actions: clinical.actions,
-                })
-                .select()
-                .single();
-
-            if (triageError) throw triageError;
+            await supabase.from("waiting_room").insert({
+                patient_name: form.fullName,
+                phone: form.phone || null,
+                reason: form.mainSymptom || null,
+                room_status: "salle_attente",
+                linked_triage_id: triage.id,
+                added_by: user?.name || "Assistante",
+            });
 
             setForm(emptyForm);
             await loadAll();
@@ -994,12 +823,10 @@ export default function CabinetDrHammachYassineV6() {
     };
 
     const saveAppointment = async () => {
-        if (!supabase) return;
         if (!appointmentForm.patientName) {
             alert("Nom du patient obligatoire");
             return;
         }
-
         const { error } = await supabase.from("appointments").insert({
             patient_name: appointmentForm.patientName,
             phone: appointmentForm.phone || null,
@@ -1010,58 +837,33 @@ export default function CabinetDrHammachYassineV6() {
             status: "planifie",
             created_by: user?.name || "",
         });
-
         if (error) {
             alert("Erreur lors de l'enregistrement du rendez-vous");
             return;
         }
-
         setAppointmentForm(emptyAppointment);
         await loadAppointments();
     };
 
     const updateAppointmentStatus = async (id, status) => {
-        if (!supabase) return;
         await supabase.from("appointments").update({ status }).eq("id", id);
         await loadAppointments();
     };
 
-    const addToWaitingRoom = async () => {
-        if (!supabase) return;
-        if (!waitingRoomForm.patientName) {
-            alert("Nom du patient obligatoire");
-            return;
-        }
-
-        const { error } = await supabase.from("waiting_room").insert({
-            patient_name: waitingRoomForm.patientName,
-            phone: waitingRoomForm.phone || null,
-            reason: waitingRoomForm.reason || null,
-            room_status: "salle_attente",
-            added_by: user?.name || "",
-        });
-
-        if (error) {
-            alert("Erreur lors de l'ajout en salle d'attente");
-            return;
-        }
-
-        setWaitingRoomForm(emptyWaitingRoom);
-        await loadWaitingRoom();
-    };
-
     const updateWaitingStatus = async (id, room_status) => {
-        if (!supabase) return;
-        await supabase.from("waiting_room").update({ room_status }).eq("id", id);
+        if (room_status === "sorti") {
+            await supabase.from("waiting_room").delete().eq("id", id);
+        } else {
+            await supabase.from("waiting_room").update({ room_status }).eq("id", id);
+        }
         await loadWaitingRoom();
     };
 
-    const updateStatus = async (recordId, status) => {
-        if (!supabase || !isDoctor) return;
+    const updateConsultationStatus = async (recordId, status) => {
+        if (!isDoctor) return;
         const payload = {
             status,
-            seen_by_doctor_at:
-                status === "vu" || status === "termine" ? new Date().toISOString() : null,
+            seen_by_doctor_at: status === "vu" || status === "termine" ? new Date().toISOString() : null,
         };
         await supabase.from("triage_forms").update(payload).eq("id", recordId);
         await loadRecords();
@@ -1069,13 +871,10 @@ export default function CabinetDrHammachYassineV6() {
     };
 
     const saveDoctorNotes = async () => {
-        if (!supabase || !isDoctor || !selectedRecord) return;
+        if (!isDoctor || !selectedRecord) return;
         try {
             setSavingDoctorNotes(true);
-            await supabase
-                .from("triage_forms")
-                .update({ doctor_notes: doctorNotesDraft })
-                .eq("id", selectedRecord.id);
+            await supabase.from("triage_forms").update({ doctor_notes: doctorNotesDraft }).eq("id", selectedRecord.id);
             await loadRecords();
         } finally {
             setSavingDoctorNotes(false);
@@ -1090,31 +889,15 @@ export default function CabinetDrHammachYassineV6() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                        <p className="mt-1 text-slate-600">
-                            V6 — consultation, rendez-vous, salle d'attente et fiches patients
-                        </p>
+                        <p className="mt-1 text-slate-600">Cabinet médical synchronisé</p>
                     </div>
-
                     <div className="flex flex-wrap gap-2">
-                        <NavButton active={activeTab === "consultation"} onClick={() => setActiveTab("consultation")}>
-                            Consultation
-                        </NavButton>
-                        <NavButton active={activeTab === "rdv"} onClick={() => setActiveTab("rdv")}>
-                            Prise de RDV
-                        </NavButton>
-                        <NavButton active={activeTab === "patients"} onClick={() => setActiveTab("patients")}>
-                            Fiches patients
-                        </NavButton>
-                        <NavButton active={activeTab === "salle_attente"} onClick={() => setActiveTab("salle_attente")}>
-                            Salle d'attente
-                        </NavButton>
-
-                        <button
-                            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm"
-                            onClick={() => setUser(null)}
-                        >
-                            Déconnexion
-                        </button>
+                        <NavButton active={activeTab === "consultation"} onClick={() => setActiveTab("consultation")}>Consultation</NavButton>
+                        <NavButton active={activeTab === "agenda"} onClick={() => setActiveTab("agenda")}>Agenda partagé</NavButton>
+                        <NavButton active={activeTab === "patients"} onClick={() => setActiveTab("patients")}>Fiches patients</NavButton>
+                        <NavButton active={activeTab === "salle_attente"} onClick={() => setActiveTab("salle_attente")}>Salle d'attente</NavButton>
+                        <NavButton active={activeTab === "patients_du_jour"} onClick={() => setActiveTab("patients_du_jour")}>Patients du jour</NavButton>
+                        <button className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setUser(null)}>Déconnexion</button>
                     </div>
                 </div>
 
@@ -1127,57 +910,25 @@ export default function CabinetDrHammachYassineV6() {
                                 <div className="mb-4 flex items-center justify-between gap-4">
                                     <h2 className="text-xl font-semibold">Synthèse médecin</h2>
                                 </div>
-
                                 {selectedRecord ? (
                                     <>
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Patient</div>
-                                                <div className="mt-1 font-medium text-slate-900">
-                                                    {selectedRecord.patient_name || "Patient sans nom"}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-600">
-                                                    {selectedRecord.patient_age || "?"} ans · {selectedRecord.patient_sex || "-"}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-600">
-                                                    {selectedRecord.patient_phone || "Téléphone non renseigné"}
-                                                </div>
+                                                <div className="mt-1 font-medium text-slate-900">{selectedRecord.patient_name || "Patient sans nom"}</div>
+                                                <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_age || "?"} ans · {selectedRecord.patient_sex || "-"}</div>
+                                                <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_phone || "Téléphone non renseigné"}</div>
                                             </div>
-
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="flex items-center justify-between gap-2">
                                                     <div className="text-sm text-slate-500">Statut consultation</div>
-                                                    <span
-                                                        className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(
-                                                            selectedRecord.status || "en_attente"
-                                                        )}`}
-                                                    >
-                                                        {(statusOptions.find((s) => s.value === selectedRecord.status)?.label) ||
-                                                            "En attente"}
-                                                    </span>
+                                                    <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(selectedRecord.status || "en_attente")}`}>{(statusOptions.find((s) => s.value === selectedRecord.status)?.label) || "En attente"}</span>
                                                 </div>
-
-                                                <div className="mt-3 text-sm text-slate-600">
-                                                    Créée le {new Date(selectedRecord.created_at).toLocaleString("fr-FR")}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-600">
-                                                    {selectedRecord.seen_by_doctor_at
-                                                        ? `Vue le ${new Date(selectedRecord.seen_by_doctor_at).toLocaleString("fr-FR")}`
-                                                        : "Pas encore vue par le médecin"}
-                                                </div>
-
+                                                <div className="mt-3 text-sm text-slate-600">Créée le {new Date(selectedRecord.created_at).toLocaleString("fr-FR")}</div>
+                                                <div className="mt-1 text-sm text-slate-600">{selectedRecord.seen_by_doctor_at ? `Vue le ${new Date(selectedRecord.seen_by_doctor_at).toLocaleString("fr-FR")}` : "Pas encore vue par le médecin"}</div>
                                                 <div className="mt-3 flex flex-wrap gap-2">
                                                     {statusOptions.map((s) => (
-                                                        <button
-                                                            key={s.value}
-                                                            onClick={() => updateStatus(selectedRecord.id, s.value)}
-                                                            className={`rounded-xl border px-3 py-2 text-xs ${selectedRecord.status === s.value
-                                                                    ? "bg-slate-900 text-white border-slate-900"
-                                                                    : "bg-white border-slate-300 text-slate-700"
-                                                                }`}
-                                                        >
-                                                            {s.label}
-                                                        </button>
+                                                        <button key={s.value} onClick={() => updateConsultationStatus(selectedRecord.id, s.value)} className={`rounded-xl border px-3 py-2 text-xs ${selectedRecord.status === s.value ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-300 text-slate-700"}`}>{s.label}</button>
                                                     ))}
                                                 </div>
                                             </div>
@@ -1187,32 +938,18 @@ export default function CabinetDrHammachYassineV6() {
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Motif et constantes</div>
                                                 <div className="mt-1 font-medium text-slate-900">{selectedRecord.main_symptom}</div>
-                                                <div className="mt-1 text-sm text-slate-600">
-                                                    TA {selectedRecord.ta || "-"} · FC {selectedRecord.fc || "-"} ·
-                                                    SpO₂ {selectedRecord.spo2 || "-"}% · T {selectedRecord.temperature || "-"}°C
-                                                </div>
+                                                <div className="mt-1 text-sm text-slate-600">TA {selectedRecord.ta || "-"} · FC {selectedRecord.fc || "-"} · SpO₂ {selectedRecord.spo2 || "-"}% · T {selectedRecord.temperature || "-"}°C</div>
                                             </div>
-
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Niveau d'urgence</div>
-                                                <div
-                                                    className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(
-                                                        selectedRecord.priority || "verte"
-                                                    )}`}
-                                                >
-                                                    {selectedRecord.priority || "verte"}
-                                                </div>
+                                                <div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || "verte")}`}>{selectedRecord.priority || "verte"}</div>
                                             </div>
                                         </div>
 
                                         <div className="mt-5 rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Alertes immédiates</div>
                                             {selectedRecord.alerts?.length ? (
-                                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                    {selectedRecord.alerts.map((a, i) => (
-                                                        <li key={`${a}-${i}`}>{a}</li>
-                                                    ))}
-                                                </ul>
+                                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">{selectedRecord.alerts.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}</ul>
                                             ) : (
                                                 <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
                                             )}
@@ -1220,556 +957,202 @@ export default function CabinetDrHammachYassineV6() {
 
                                         <div className="mt-5 rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Top 3 diagnostics probables</div>
-                                            <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
-                                                {(selectedRecord.diagnoses || []).map((d, i) => (
-                                                    <li key={`${d.label}-${i}`}>
-                                                        <span className="font-medium">{d.label}</span>{" "}
-                                                        <span className="text-slate-500">— score {d.score}</span>
-                                                    </li>
-                                                ))}
-                                            </ol>
+                                            <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">{(selectedRecord.diagnoses || []).map((d, i) => <li key={`${d.label}-${i}`}><span className="font-medium">{d.label}</span> <span className="text-slate-500">— score {d.score}</span></li>)}</ol>
                                         </div>
 
                                         <div className="mt-5 grid gap-4 md:grid-cols-2">
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Examens suggérés</div>
-                                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                    {(selectedRecord.exams || []).map((e, i) => (
-                                                        <li key={`${e}-${i}`}>{e}</li>
-                                                    ))}
-                                                </ul>
+                                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">{(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}</ul>
                                             </div>
-
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Conduite suggérée</div>
-                                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                    {(selectedRecord.actions || []).length
-                                                        ? (selectedRecord.actions || []).map((a, i) => (
-                                                            <li key={`${a}-${i}`}>{a}</li>
-                                                        ))
-                                                        : managementSuggestions.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}
-                                                </ul>
+                                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">{(selectedRecord.actions || []).length ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>) : managementSuggestions.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}</ul>
                                             </div>
                                         </div>
 
                                         <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                                            <div className="text-sm text-slate-500">
-                                                Suggestions thérapeutiques / suite à donner
-                                            </div>
-                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {therapeuticSuggestions.map((item, i) => (
-                                                    <li key={`${item}-${i}`}>{item}</li>
-                                                ))}
-                                            </ul>
+                                            <div className="text-sm text-slate-500">Suggestions thérapeutiques / suite à donner</div>
+                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">{therapeuticSuggestions.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}</ul>
                                         </div>
 
                                         <div className="mt-5 grid gap-4 md:grid-cols-2">
                                             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Notes assistante</div>
-                                                <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                                                    {selectedRecord.notes || "Aucune note"}
-                                                </div>
+                                                <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedRecord.notes || "Aucune note"}</div>
                                             </div>
-
                                             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Notes médecin</div>
-                                                <textarea
-                                                    className="mt-2 min-h-32 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                                                    value={doctorNotesDraft}
-                                                    onChange={(e) => setDoctorNotesDraft(e.target.value)}
-                                                    placeholder="Observations, examen clinique, conduite, prescription..."
-                                                />
-                                                <button
-                                                    className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
-                                                    onClick={saveDoctorNotes}
-                                                    disabled={savingDoctorNotes}
-                                                >
-                                                    {savingDoctorNotes ? "Enregistrement..." : "Enregistrer les notes médecin"}
-                                                </button>
+                                                <textarea className="mt-2 min-h-32 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={doctorNotesDraft} onChange={(e) => setDoctorNotesDraft(e.target.value)} placeholder="Observations, examen clinique, conduite, prescription..." />
+                                                <button className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50" onClick={saveDoctorNotes} disabled={savingDoctorNotes}>{savingDoctorNotes ? "Enregistrement..." : "Enregistrer les notes médecin"}</button>
                                             </div>
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                                        Aucune fiche reçue pour le moment.
-                                    </div>
+                                    <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Aucune fiche reçue pour le moment.</div>
                                 )}
                             </section>
                         ) : (
                             <section className={section}>
                                 <div className="mb-4 flex items-center justify-between">
                                     <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
-                                    <span
-                                        className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(
-                                            summary.priority
-                                        )}`}
-                                    >
-                                        Priorité {summary.priority}
-                                    </span>
+                                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>Priorité {summary.priority}</span>
                                 </div>
-
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label className={label}>Nom complet</label>
-                                        <input
-                                            className={input}
-                                            value={form.fullName}
-                                            onChange={(e) => update("fullName", e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Téléphone</label>
-                                        <input
-                                            className={input}
-                                            value={form.phone}
-                                            onChange={(e) => update("phone", e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Âge</label>
-                                        <input
-                                            className={input}
-                                            value={form.age}
-                                            onChange={(e) => update("age", e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Sexe</label>
-                                        <select
-                                            className={input}
-                                            value={form.sex}
-                                            onChange={(e) => update("sex", e.target.value)}
-                                        >
-                                            <option>Femme</option>
-                                            <option>Homme</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={label}>Motif principal</label>
-                                        <select
-                                            className={input}
-                                            value={form.mainSymptom}
-                                            onChange={(e) => update("mainSymptom", e.target.value)}
-                                        >
-                                            {symptomCatalog.map((s) => (
-                                                <option key={s}>{s}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={label}>Intensité douleur /10</label>
-                                        <input
-                                            className={input}
-                                            value={form.painScale}
-                                            onChange={(e) => update("painScale", e.target.value)}
-                                        />
-                                    </div>
+                                    <div><label className={label}>Nom complet</label><input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} /></div>
+                                    <div><label className={label}>Téléphone</label><input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} /></div>
+                                    <div><label className={label}>Âge</label><input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} /></div>
+                                    <div><label className={label}>Sexe</label><select className={input} value={form.sex} onChange={(e) => update("sex", e.target.value)}><option>Femme</option><option>Homme</option></select></div>
+                                    <div><label className={label}>Motif principal</label><select className={input} value={form.mainSymptom} onChange={(e) => update("mainSymptom", e.target.value)}>{symptomCatalog.map((s) => <option key={s}>{s}</option>)}</select></div>
+                                    <div><label className={label}>Intensité douleur /10</label><input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} /></div>
                                 </div>
-
                                 <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
                                 <div className="grid gap-4 md:grid-cols-3">
-                                    <div>
-                                        <label className={label}>TA</label>
-                                        <input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>FC</label>
-                                        <input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>SpO₂</label>
-                                        <input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Température</label>
-                                        <input
-                                            className={input}
-                                            value={form.temperature}
-                                            onChange={(e) => update("temperature", e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={label}>FR</label>
-                                        <input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Glycémie</label>
-                                        <input
-                                            className={input}
-                                            value={form.glycemia}
-                                            onChange={(e) => update("glycemia", e.target.value)}
-                                        />
-                                    </div>
+                                    <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
+                                    <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
+                                    <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
+                                    <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
+                                    <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
+                                    <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
                                 </div>
-
                                 <h3 className="mb-3 mt-6 text-lg font-medium">Questionnaire rapide</h3>
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label className={label}>Début</label>
-                                        <select className={input} value={form.onset} onChange={(e) => update("onset", e.target.value)}>
-                                            <option>Brutal</option>
-                                            <option>Progressif</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className={label}>Durée</label>
-                                        <select className={input} value={form.duration} onChange={(e) => update("duration", e.target.value)}>
-                                            <option>{"< 24 h"}</option>
-                                            <option>1–3 jours</option>
-                                            <option>{"> 1 semaine"}</option>
-                                            <option>Chronique</option>
-                                        </select>
-                                    </div>
+                                    <div><label className={label}>Début</label><select className={input} value={form.onset} onChange={(e) => update("onset", e.target.value)}><option>Brutal</option><option>Progressif</option></select></div>
+                                    <div><label className={label}>Durée</label><select className={input} value={form.duration} onChange={(e) => update("duration", e.target.value)}><option>{"< 24 h"}</option><option>1–3 jours</option><option>{"> 1 semaine"}</option><option>Chronique</option></select></div>
                                 </div>
-
-                                <div className="mt-6">
-                                    <label className={label}>Symptômes associés</label>
-                                    <MultiSelectChips
-                                        options={associatedSymptoms}
-                                        selected={form.associated}
-                                        setSelected={(v) => update("associated", v)}
-                                    />
-                                </div>
-
-                                <div className="mt-6">
-                                    <label className={label}>Facteurs de risque / antécédents</label>
-                                    <MultiSelectChips
-                                        options={riskFactorsList}
-                                        selected={form.risks}
-                                        setSelected={(v) => update("risks", v)}
-                                    />
-                                </div>
-
-                                <div className="mt-6">
-                                    <label className={label}>Notes assistante</label>
-                                    <textarea
-                                        className={`${input} min-h-28`}
-                                        value={form.notes}
-                                        onChange={(e) => update("notes", e.target.value)}
-                                    />
-                                </div>
-
+                                <div className="mt-6"><label className={label}>Symptômes associés</label><MultiSelectChips options={associatedSymptoms} selected={form.associated} setSelected={(v) => update("associated", v)} /></div>
+                                <div className="mt-6"><label className={label}>Facteurs de risque / antécédents</label><MultiSelectChips options={riskFactorsList} selected={form.risks} setSelected={(v) => update("risks", v)} /></div>
+                                <div className="mt-6"><label className={label}>Notes assistante</label><textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} /></div>
                                 <div className="mt-6 flex flex-wrap gap-3">
-                                    <button
-                                        className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50"
-                                        onClick={saveRecord}
-                                        disabled={loading}
-                                    >
-                                        {loading ? "Enregistrement..." : "Créer la fiche"}
-                                    </button>
-
-                                    <button
-                                        className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm"
-                                        onClick={() => setForm(emptyForm)}
-                                    >
-                                        Réinitialiser
-                                    </button>
+                                    <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50" onClick={saveRecord} disabled={loading}>{loading ? "Enregistrement..." : "Créer la fiche"}</button>
+                                    <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm" onClick={() => setForm(emptyForm)}>Réinitialiser</button>
                                 </div>
                             </section>
                         )}
-
                         <aside className="space-y-6">
                             <section className={section}>
-                                <div className="mb-4 flex items-center justify-between gap-3">
-                                    <h2 className="text-lg font-semibold">Files consultation</h2>
-                                    <button className="text-xs text-slate-500 underline" onClick={loadRecords}>
-                                        Actualiser
-                                    </button>
-                                </div>
-
-                                <SearchInput
-                                    value={searchRecords}
-                                    onChange={setSearchRecords}
-                                    placeholder="Rechercher nom, téléphone ou motif"
-                                />
-
+                                <div className="mb-4 flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">Dossiers consultation</h2><button className="text-xs text-slate-500 underline" onClick={loadRecords}>Actualiser</button></div>
+                                <SearchInput value={searchRecords} onChange={setSearchRecords} placeholder="Rechercher nom, téléphone ou motif" />
                                 <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
-                                    {filteredRecords.length ? (
-                                        filteredRecords.map((r) => (
-                                            <PatientCard
-                                                key={r.id}
-                                                p={r}
-                                                onOpen={(id) => {
-                                                    setSelectedRecordId(id);
-                                                }}
-                                                canSeeClinical={isDoctor}
-                                            />
-                                        ))
-                                    ) : (
-                                        <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                                            Aucun patient enregistré.
-                                        </div>
-                                    )}
+                                    {filteredRecords.length ? filteredRecords.map((r) => <PatientCard key={r.id} p={r} onOpen={(id) => setSelectedRecordId(id)} canSeeClinical={isDoctor} />) : <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun patient enregistré.</div>}
                                 </div>
                             </section>
                         </aside>
                     </div>
                 )}
 
-                {activeTab === "rdv" && (
-                    <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+                {activeTab === "agenda" && (
+                    <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                         <section className={section}>
-                            <h2 className="text-xl font-semibold">Prise de rendez-vous</h2>
-
+                            <h2 className="text-xl font-semibold">Nouveau rendez-vous</h2>
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className={label}>Nom du patient</label>
-                                    <input
-                                        className={input}
-                                        value={appointmentForm.patientName}
-                                        onChange={(e) => updateAppointment("patientName", e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={label}>Téléphone</label>
-                                    <input
-                                        className={input}
-                                        value={appointmentForm.phone}
-                                        onChange={(e) => updateAppointment("phone", e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={label}>Date</label>
-                                    <input
-                                        type="date"
-                                        className={input}
-                                        value={appointmentForm.date}
-                                        onChange={(e) => updateAppointment("date", e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={label}>Heure</label>
-                                    <input
-                                        type="time"
-                                        className={input}
-                                        value={appointmentForm.time}
-                                        onChange={(e) => updateAppointment("time", e.target.value)}
-                                    />
-                                </div>
+                                <div><label className={label}>Nom du patient</label><input className={input} value={appointmentForm.patientName} onChange={(e) => updateAppointment("patientName", e.target.value)} /></div>
+                                <div><label className={label}>Téléphone</label><input className={input} value={appointmentForm.phone} onChange={(e) => updateAppointment("phone", e.target.value)} /></div>
+                                <div><label className={label}>Date</label><input type="date" className={input} value={appointmentForm.date} onChange={(e) => updateAppointment("date", e.target.value)} /></div>
+                                <div><label className={label}>Heure</label><input type="time" className={input} value={appointmentForm.time} onChange={(e) => updateAppointment("time", e.target.value)} /></div>
                             </div>
-
-                            <div className="mt-4">
-                                <label className={label}>Motif</label>
-                                <input
-                                    className={input}
-                                    value={appointmentForm.reason}
-                                    onChange={(e) => updateAppointment("reason", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="mt-4">
-                                <label className={label}>Notes</label>
-                                <textarea
-                                    className={`${input} min-h-24`}
-                                    value={appointmentForm.notes}
-                                    onChange={(e) => updateAppointment("notes", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="mt-4">
-                                <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white" onClick={saveAppointment}>
-                                    Enregistrer le rendez-vous
-                                </button>
-                            </div>
+                            <div className="mt-4"><label className={label}>Motif</label><input className={input} value={appointmentForm.reason} onChange={(e) => updateAppointment("reason", e.target.value)} /></div>
+                            <div className="mt-4"><label className={label}>Notes</label><textarea className={`${input} min-h-24`} value={appointmentForm.notes} onChange={(e) => updateAppointment("notes", e.target.value)} /></div>
+                            <div className="mt-4"><button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white" onClick={saveAppointment}>Enregistrer le rendez-vous</button></div>
                         </section>
-
                         <section className={section}>
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold">Liste des rendez-vous</h2>
-                                <button className="text-xs text-slate-500 underline" onClick={loadAppointments}>
-                                    Actualiser
-                                </button>
-                            </div>
-
-                            <div className="mt-4">
-                                <SearchInput
-                                    value={searchAppointments}
-                                    onChange={setSearchAppointments}
-                                    placeholder="Rechercher nom, téléphone ou motif"
-                                />
-                            </div>
-
-                            <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
-                                {filteredAppointments.map((a) => (
-                                    <div key={a.id} className="rounded-2xl border border-slate-200 p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <div className="font-medium text-slate-900">{a.patient_name}</div>
-                                                <div className="mt-1 text-sm text-slate-600">
-                                                    {a.phone || "Téléphone non renseigné"}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-600">
-                                                    {a.appointment_date || "-"} {a.appointment_time || ""}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-600">{a.reason || "-"}</div>
-                                            </div>
-                                            <span className={`rounded-full border px-2.5 py-1 text-xs ${appointmentColor(a.status || "planifie")}`}>
-                                                {(appointmentStatusOptions.find((s) => s.value === a.status)?.label) || "Planifié"}
-                                            </span>
-                                        </div>
-
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {appointmentStatusOptions.map((s) => (
-                                                <button
-                                                    key={s.value}
-                                                    onClick={() => updateAppointmentStatus(a.id, s.value)}
-                                                    className={`rounded-xl border px-3 py-2 text-xs ${a.status === s.value
-                                                            ? "bg-slate-900 text-white border-slate-900"
-                                                            : "bg-white border-slate-300 text-slate-700"
-                                                        }`}
-                                                >
-                                                    {s.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Agenda partagé</h2><button className="text-xs text-slate-500 underline" onClick={loadAppointments}>Actualiser</button></div>
+                            <div className="mt-4"><SearchInput value={searchAppointments} onChange={setSearchAppointments} placeholder="Rechercher nom, téléphone ou motif" /></div>
+                            <div className="mt-4 max-h-[70vh] overflow-auto pr-1">
+                                <AgendaView appointments={filteredAppointments} onStatusChange={updateAppointmentStatus} />
                             </div>
                         </section>
                     </div>
                 )}
 
                 {activeTab === "patients" && (
-                    <div className="grid gap-6">
-                        <section className={section}>
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold">Fiches patients</h2>
-                                <button className="text-xs text-slate-500 underline" onClick={loadPatients}>
-                                    Actualiser
-                                </button>
-                            </div>
-
-                            <div className="mt-4">
-                                <SearchInput
-                                    value={searchPatients}
-                                    onChange={setSearchPatients}
-                                    placeholder="Rechercher nom ou téléphone"
-                                />
-                            </div>
-
-                            <div className="mt-4 overflow-auto">
-                                <table className="min-w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b border-slate-200 text-left">
-                                            <th className="py-2 pr-4">Nom</th>
-                                            <th className="py-2 pr-4">Âge</th>
-                                            <th className="py-2 pr-4">Sexe</th>
-                                            <th className="py-2 pr-4">Téléphone</th>
-                                            <th className="py-2 pr-4">Créé le</th>
+                    <section className={section}>
+                        <div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Fiches patients</h2><button className="text-xs text-slate-500 underline" onClick={loadPatients}>Actualiser</button></div>
+                        <div className="mt-4"><SearchInput value={searchPatients} onChange={setSearchPatients} placeholder="Rechercher nom ou téléphone" /></div>
+                        <div className="mt-4 overflow-auto">
+                            <table className="min-w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-200 text-left">
+                                        <th className="py-2 pr-4">Nom</th>
+                                        <th className="py-2 pr-4">Âge</th>
+                                        <th className="py-2 pr-4">Sexe</th>
+                                        <th className="py-2 pr-4">Téléphone</th>
+                                        <th className="py-2 pr-4">Créé le</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredPatients.map((p) => (
+                                        <tr key={p.id} className="border-b border-slate-100">
+                                            <td className="py-2 pr-4">{p.full_name}</td>
+                                            <td className="py-2 pr-4">{p.age || "-"}</td>
+                                            <td className="py-2 pr-4">{p.sex || "-"}</td>
+                                            <td className="py-2 pr-4">{p.phone || "-"}</td>
+                                            <td className="py-2 pr-4">{p.created_at ? new Date(p.created_at).toLocaleString("fr-FR") : "-"}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredPatients.map((p) => (
-                                            <tr key={p.id} className="border-b border-slate-100">
-                                                <td className="py-2 pr-4">{p.full_name}</td>
-                                                <td className="py-2 pr-4">{p.age || "-"}</td>
-                                                <td className="py-2 pr-4">{p.sex || "-"}</td>
-                                                <td className="py-2 pr-4">{p.phone || "-"}</td>
-                                                <td className="py-2 pr-4">
-                                                    {p.created_at ? new Date(p.created_at).toLocaleString("fr-FR") : "-"}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
-                    </div>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 )}
 
                 {activeTab === "salle_attente" && (
-                    <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-                        <section className={section}>
-                            <h2 className="text-xl font-semibold">Ajouter en salle d'attente</h2>
-
-                            <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className={label}>Nom du patient</label>
-                                    <input
-                                        className={input}
-                                        value={waitingRoomForm.patientName}
-                                        onChange={(e) => updateWaitingRoom("patientName", e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={label}>Téléphone</label>
-                                    <input
-                                        className={input}
-                                        value={waitingRoomForm.phone}
-                                        onChange={(e) => updateWaitingRoom("phone", e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="mt-4">
-                                <label className={label}>Motif</label>
-                                <input
-                                    className={input}
-                                    value={waitingRoomForm.reason}
-                                    onChange={(e) => updateWaitingRoom("reason", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="mt-4">
-                                <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white" onClick={addToWaitingRoom}>
-                                    Ajouter
-                                </button>
-                            </div>
-                        </section>
-
-                        <section className={section}>
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold">Salle d'attente</h2>
-                                <button className="text-xs text-slate-500 underline" onClick={loadWaitingRoom}>
-                                    Actualiser
-                                </button>
-                            </div>
-
-                            <div className="mt-4">
-                                <SearchInput
-                                    value={searchWaitingRoom}
-                                    onChange={setSearchWaitingRoom}
-                                    placeholder="Rechercher nom, téléphone ou motif"
-                                />
-                            </div>
-
-                            <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
-                                {filteredWaitingRoom.map((w) => (
-                                    <div key={w.id} className="rounded-2xl border border-slate-200 p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <div className="font-medium text-slate-900">{w.patient_name}</div>
-                                                <div className="mt-1 text-sm text-slate-600">{w.phone || "-"}</div>
-                                                <div className="mt-1 text-sm text-slate-600">{w.reason || "-"}</div>
-                                                <div className="mt-1 text-xs text-slate-500">
-                                                    {w.created_at ? new Date(w.created_at).toLocaleString("fr-FR") : "-"}
-                                                </div>
-                                            </div>
-
-                                            <span className={`rounded-full border px-2.5 py-1 text-xs ${waitingRoomColor(w.room_status || "salle_attente")}`}>
-                                                {(waitingRoomOptions.find((s) => s.value === w.room_status)?.label) || "Salle d'attente"}
-                                            </span>
+                    <section className={section}>
+                        <div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Salle d'attente</h2><button className="text-xs text-slate-500 underline" onClick={loadWaitingRoom}>Actualiser</button></div>
+                        <div className="mt-4"><SearchInput value={searchWaitingRoom} onChange={setSearchWaitingRoom} placeholder="Rechercher nom, téléphone ou motif" /></div>
+                        <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
+                            {filteredWaitingRoom.length ? filteredWaitingRoom.map((w) => (
+                                <div key={w.id} className="rounded-2xl border border-slate-200 p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="font-medium text-slate-900">{w.patient_name}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{w.phone || "-"}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{w.reason || "-"}</div>
+                                            <div className="mt-1 text-xs text-slate-500">{w.created_at ? new Date(w.created_at).toLocaleString("fr-FR") : "-"}</div>
                                         </div>
-
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {waitingRoomOptions.map((s) => (
-                                                <button
-                                                    key={s.value}
-                                                    onClick={() => updateWaitingStatus(w.id, s.value)}
-                                                    className={`rounded-xl border px-3 py-2 text-xs ${w.room_status === s.value
-                                                            ? "bg-slate-900 text-white border-slate-900"
-                                                            : "bg-white border-slate-300 text-slate-700"
-                                                        }`}
-                                                >
-                                                    {s.label}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <span className="rounded-full border px-2.5 py-1 text-xs bg-emerald-100 text-emerald-800 border-emerald-200">Présent</span>
                                     </div>
-                                ))}
-                            </div>
-                        </section>
-                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <button onClick={() => updateWaitingStatus(w.id, "en_consultation")} className="rounded-xl border px-3 py-2 text-xs bg-white border-slate-300 text-slate-700">En consultation</button>
+                                        <button onClick={() => updateWaitingStatus(w.id, "sorti")} className="rounded-xl border px-3 py-2 text-xs bg-slate-900 text-white border-slate-900">Sorti</button>
+                                    </div>
+                                </div>
+                            )) : <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun patient en salle d'attente.</div>}
+                        </div>
+                    </section>
+                )}
+
+                {activeTab === "patients_du_jour" && (
+                    <section className={section}>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-semibold">Patients du jour</h2>
+                            <div className="text-sm text-slate-600">Total : {todaysPatients.length}</div>
+                        </div>
+                        <div className="mt-4 overflow-auto">
+                            <table className="min-w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-200 text-left">
+                                        <th className="py-2 pr-4">Heure</th>
+                                        <th className="py-2 pr-4">Patient</th>
+                                        <th className="py-2 pr-4">Motif</th>
+                                        <th className="py-2 pr-4">Statut</th>
+                                        <th className="py-2 pr-4">Urgence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {todaysPatients.map((p) => (
+                                        <tr key={p.id} className="border-b border-slate-100">
+                                            <td className="py-2 pr-4">{new Date(p.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</td>
+                                            <td className="py-2 pr-4">{p.patient_name}</td>
+                                            <td className="py-2 pr-4">{p.main_symptom}</td>
+                                            <td className="py-2 pr-4">{(statusOptions.find((s) => s.value === p.status)?.label) || "En attente"}</td>
+                                            <td className="py-2 pr-4">{p.priority}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 )}
             </div>
         </div>
