@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const symptomCatalog = [
     "Douleur thoracique",
@@ -59,6 +59,12 @@ const riskFactorsList = [
     "Insuffisance cardiaque",
 ];
 
+const statusOptions = [
+    { value: "en_attente", label: "En attente" },
+    { value: "vu", label: "Vu" },
+    { value: "termine", label: "Terminé" },
+];
+
 const demoUsers = {
     assistante: { role: "assistante", name: "Assistante", pin: "1234" },
     medecin: { role: "medecin", name: "Dr Hammach Yassine", pin: "2026" },
@@ -90,6 +96,12 @@ function badgeColor(level) {
     return "bg-emerald-100 text-emerald-800 border-emerald-200";
 }
 
+function statusColor(status) {
+    if (status === "termine") return "bg-slate-100 text-slate-800 border-slate-200";
+    if (status === "vu") return "bg-blue-100 text-blue-800 border-blue-200";
+    return "bg-violet-100 text-violet-800 border-violet-200";
+}
+
 function parseSystolic(ta) {
     if (!ta) return null;
     const m = String(ta).match(/(\d+)/);
@@ -108,10 +120,7 @@ function computeClinicalSummary(form) {
     const fc = Number(form.fc || 0);
     const age = Number(form.age || 0);
     const pas = parseSystolic(form.ta);
-    const has = (v) =>
-        (form.associated || []).includes(v) ||
-        (form.risks || []).includes(v) ||
-        form.mainSymptom === v;
+    const has = (v) => (form.associated || []).includes(v) || (form.risks || []).includes(v) || form.mainSymptom === v;
 
     if (spo2 > 0 && spo2 < 94) {
         alerts.push("SpO₂ < 94 % : évaluer urgence respiratoire ou cardiovasculaire");
@@ -132,13 +141,7 @@ function computeClinicalSummary(form) {
 
     switch (form.mainSymptom) {
         case "Douleur thoracique": {
-            if (
-                has("Douleur irradiant bras gauche") ||
-                has("Douleur à l'effort") ||
-                (form.risks || []).includes("HTA") ||
-                (form.risks || []).includes("Tabac") ||
-                (form.risks || []).includes("Antécédent cardiaque")
-            ) {
+            if (has("Douleur irradiant bras gauche") || has("Douleur à l'effort") || has("HTA") || has("Tabac") || has("Antécédent cardiaque")) {
                 diagnoses.push({ label: "Syndrome coronarien aigu", score: 95 });
                 diagnoses.push({ label: "Angor instable", score: 82 });
                 diagnoses.push({ label: "Douleur pariétale thoracique", score: 28 });
@@ -165,7 +168,7 @@ function computeClinicalSummary(form) {
             break;
         }
         case "Dyspnée": {
-            if (has("Crépitants") || (form.risks || []).includes("Insuffisance cardiaque")) {
+            if (has("Crépitants") || has("Insuffisance cardiaque")) {
                 diagnoses.push({ label: "Œdème aigu pulmonaire", score: 90 });
                 diagnoses.push({ label: "SCA avec décompensation", score: 62 });
                 diagnoses.push({ label: "Pneumonie", score: 35 });
@@ -267,13 +270,7 @@ function computeClinicalSummary(form) {
             break;
         }
         case "Douleur mollet": {
-            diagnoses.push({
-                label: "Thrombose veineuse profonde",
-                score:
-                    (form.risks || []).includes("Voyage prolongé récent") || has("Douleur mollet unilatérale")
-                        ? 90
-                        : 60,
-            });
+            diagnoses.push({ label: "Thrombose veineuse profonde", score: has("Voyage prolongé récent") || has("Douleur mollet unilatérale") ? 90 : 60 });
             diagnoses.push({ label: "Contracture musculaire", score: 40 });
             diagnoses.push({ label: "Kyste poplité", score: 20 });
             exams.add("Score de Wells");
@@ -297,11 +294,7 @@ function computeClinicalSummary(form) {
             break;
         }
         case "Douleur pelvienne": {
-            if (
-                (form.risks || []).includes("Grossesse possible") ||
-                has("Grossesse possible") ||
-                has("Saignement vaginal")
-            ) {
+            if (has("Grossesse possible") || has("Saignement vaginal")) {
                 diagnoses.push({ label: "Grossesse extra-utérine", score: 92 });
                 diagnoses.push({ label: "Fausse couche", score: 50 });
                 diagnoses.push({ label: "Kyste ovarien", score: 45 });
@@ -344,11 +337,7 @@ function computeClinicalSummary(form) {
 
 function MultiSelectChips({ options, selected, setSelected }) {
     const toggle = (option) => {
-        setSelected(
-            selected.includes(option)
-                ? selected.filter((x) => x !== option)
-                : [...selected, option]
-        );
+        setSelected(selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option]);
     };
 
     return (
@@ -360,10 +349,7 @@ function MultiSelectChips({ options, selected, setSelected }) {
                         type="button"
                         key={option}
                         onClick={() => toggle(option)}
-                        className={`rounded-full border px-3 py-1.5 text-xs ${active
-                                ? "bg-slate-900 text-white border-slate-900"
-                                : "bg-white text-slate-700 border-slate-300"
-                            }`}
+                        className={`rounded-full border px-3 py-1.5 text-xs ${active ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300"}`}
                     >
                         {option}
                     </button>
@@ -392,36 +378,21 @@ function LoginScreen({ onLogin }) {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
             <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h1 className="text-2xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                <p className="mt-2 text-sm text-slate-600">Connexion V2 — synchronisation Supabase</p>
+                <p className="mt-2 text-sm text-slate-600">V3 — accès assistante limité + interface médecin renforcée</p>
                 <div className="mt-6 space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Rôle</label>
-                        <select
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                        >
+                        <select className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
                             <option value="assistante">Assistante</option>
                             <option value="medecin">Médecin</option>
                         </select>
                     </div>
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Code PIN</label>
-                        <input
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                            type="password"
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value)}
-                            placeholder="1234 ou 2026"
-                        />
+                        <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="1234 ou 2026" />
                     </div>
                     {error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
-                    <button
-                        className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white"
-                        onClick={submit}
-                    >
-                        Se connecter
-                    </button>
+                    <button className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white" onClick={submit}>Se connecter</button>
                     <div className="text-xs text-slate-500">Démo : Assistante = 1234 · Médecin = 2026</div>
                 </div>
             </div>
@@ -429,47 +400,61 @@ function LoginScreen({ onLogin }) {
     );
 }
 
-function PatientCard({ p, onOpen }) {
-    const priorityStyles = badgeColor(p.priority);
+function SearchInput({ value, onChange }) {
     return (
-        <button
-            onClick={() => onOpen(p.id)}
-            className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300"
-        >
+        <input
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Rechercher nom, téléphone ou motif"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+        />
+    );
+}
+
+function PatientCard({ p, onOpen, canSeeClinical }) {
+    return (
+        <button onClick={() => onOpen(p.id)} className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <div className="font-medium text-slate-900">{p.patient_name || "Patient sans nom"}</div>
-                    <div className="mt-1 text-sm text-slate-600">
-                        {p.patient_age || "?"} ans · {p.patient_sex} · {p.main_symptom}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                        {new Date(p.created_at).toLocaleString("fr-FR")}
-                    </div>
+                    <div className="mt-1 text-sm text-slate-600">{p.patient_age || "?"} ans · {p.patient_sex || "-"} · {p.main_symptom}</div>
+                    <div className="mt-1 text-xs text-slate-500">{new Date(p.created_at).toLocaleString("fr-FR")}</div>
                 </div>
-                <span className={`rounded-full border px-2.5 py-1 text-xs ${priorityStyles}`}>
-                    {p.priority}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                    <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(p.status || "en_attente")}`}>{(statusOptions.find((s) => s.value === p.status)?.label) || "En attente"}</span>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs ${badgeColor(p.priority || "verte")}`}>{p.priority || "verte"}</span>
+                </div>
             </div>
-            <div className="mt-3 text-sm text-slate-700">{p.diagnoses?.[0]?.label || "Aucun diagnostic"}</div>
+            <div className="mt-3 text-sm text-slate-700">{canSeeClinical ? (p.diagnoses?.[0]?.label || "Aucun diagnostic") : (p.notes ? "Fiche renseignée" : "Fiche en attente")}</div>
         </button>
     );
 }
 
-export default function CabinetDrHammachYassineV2() {
+export default function CabinetDrHammachYassineV3() {
     const [user, setUser] = useState(null);
     const [view, setView] = useState("assistante");
     const [form, setForm] = useState(emptyForm);
     const [records, setRecords] = useState([]);
     const [selectedRecordId, setSelectedRecordId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
 
+    const section = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+    const label = "mb-1 block text-sm font-medium text-slate-700";
+    const input = "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
+    const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
     const summary = useMemo(() => computeClinicalSummary(form), [form]);
+    const isDoctor = user?.role === "medecin";
 
     const loadRecords = async () => {
+        if (!supabase) return;
+        setRefreshing(true);
         const { data, error } = await supabase
             .from("triage_forms")
             .select(`
         id,
+        status,
         main_symptom,
         priority,
         alerts,
@@ -491,34 +476,36 @@ export default function CabinetDrHammachYassineV2() {
       `)
             .order("created_at", { ascending: false });
 
-        if (error) {
-            console.error(error);
-            return;
+        if (!error) {
+            const normalized = (data || []).map((row) => ({
+                id: row.id,
+                status: row.status || "en_attente",
+                main_symptom: row.main_symptom,
+                priority: row.priority || "verte",
+                alerts: row.alerts || [],
+                diagnoses: row.diagnoses || [],
+                exams: row.exams || [],
+                actions: row.actions || [],
+                notes: row.notes || "",
+                ta: row.ta || "",
+                fc: row.fc || "",
+                spo2: row.spo2 || "",
+                temperature: row.temperature || "",
+                created_at: row.created_at,
+                patient_name: row.patients?.full_name || "",
+                patient_age: row.patients?.age || "",
+                patient_sex: row.patients?.sex || "",
+                patient_phone: row.patients?.phone || "",
+            }));
+            setRecords(normalized);
+            if (!selectedRecordId && normalized[0]) setSelectedRecordId(normalized[0].id);
         }
-
-        const normalized = (data || []).map((row) => ({
-            id: row.id,
-            main_symptom: row.main_symptom,
-            priority: row.priority,
-            alerts: row.alerts || [],
-            diagnoses: row.diagnoses || [],
-            exams: row.exams || [],
-            actions: row.actions || [],
-            notes: row.notes || "",
-            ta: row.ta || "",
-            fc: row.fc || "",
-            spo2: row.spo2 || "",
-            temperature: row.temperature || "",
-            created_at: row.created_at,
-            patient_name: row.patients?.full_name || "",
-            patient_age: row.patients?.age || "",
-            patient_sex: row.patients?.sex || "",
-            patient_phone: row.patients?.phone || "",
-        }));
-
-        setRecords(normalized);
-        if (!selectedRecordId && normalized[0]) setSelectedRecordId(normalized[0].id);
+        setRefreshing(false);
     };
+
+    useEffect(() => {
+        if (user) setView(user.role === "medecin" ? "medecin" : "assistante");
+    }, [user]);
 
     useEffect(() => {
         loadRecords();
@@ -526,24 +513,25 @@ export default function CabinetDrHammachYassineV2() {
         return () => clearInterval(interval);
     }, []);
 
-    useEffect(() => {
-        if (user) setView(user.role);
-    }, [user]);
+    const filteredRecords = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return records;
+        return records.filter((r) =>
+            [r.patient_name, r.patient_phone, r.main_symptom]
+                .filter(Boolean)
+                .some((v) => String(v).toLowerCase().includes(q))
+        );
+    }, [records, search]);
 
-    const selectedRecord = useMemo(
-        () => records.find((r) => r.id === selectedRecordId) || null,
-        [records, selectedRecordId]
-    );
-
-    const section = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
-    const label = "mb-1 block text-sm font-medium text-slate-700";
-    const input = "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
-    const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+    const selectedRecord = useMemo(() => records.find((r) => r.id === selectedRecordId) || null, [records, selectedRecordId]);
 
     const saveRecord = async () => {
+        if (!supabase) {
+            alert("Variables Supabase manquantes");
+            return;
+        }
         try {
             setLoading(true);
-
             const { data: patient, error: patientError } = await supabase
                 .from("patients")
                 .insert({
@@ -554,16 +542,15 @@ export default function CabinetDrHammachYassineV2() {
                 })
                 .select()
                 .single();
-
             if (patientError) throw patientError;
 
             const clinical = computeClinicalSummary(form);
-
             const { data: triage, error: triageError } = await supabase
                 .from("triage_forms")
                 .insert({
                     patient_id: patient.id,
                     created_by: user?.name || "Assistante",
+                    status: "en_attente",
                     main_symptom: form.mainSymptom,
                     onset: form.onset,
                     duration: form.duration,
@@ -585,11 +572,10 @@ export default function CabinetDrHammachYassineV2() {
                 })
                 .select()
                 .single();
-
             if (triageError) throw triageError;
 
             setForm(emptyForm);
-            setView("medecin");
+            setView("assistante");
             await loadRecords();
             setSelectedRecordId(triage.id);
         } catch (e) {
@@ -597,6 +583,15 @@ export default function CabinetDrHammachYassineV2() {
             alert("Erreur lors de l'enregistrement dans Supabase");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const updateStatus = async (recordId, status) => {
+        if (!supabase || !isDoctor) return;
+        const { error } = await supabase.from("triage_forms").update({ status }).eq("id", recordId);
+        if (!error) {
+            await loadRecords();
+            setSelectedRecordId(recordId);
         }
     };
 
@@ -608,142 +603,24 @@ export default function CabinetDrHammachYassineV2() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                        <p className="mt-1 text-slate-600">V2 — synchronisation cloud assistante → médecin</p>
+                        <p className="mt-1 text-slate-600">V3 — accès assistante restreint, statut patient, recherche et suivi médecin</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <button
-                            className={`rounded-full px-4 py-2 text-sm ${view === "assistante" ? "bg-slate-900 text-white" : "bg-white border border-slate-300"}`}
-                            onClick={() => setView("assistante")}
-                        >
-                            Vue assistante
-                        </button>
-                        <button
-                            className={`rounded-full px-4 py-2 text-sm ${view === "medecin" ? "bg-slate-900 text-white" : "bg-white border border-slate-300"}`}
-                            onClick={() => setView("medecin")}
-                        >
-                            Vue médecin
-                        </button>
-                        <button
-                            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm"
-                            onClick={() => setUser(null)}
-                        >
-                            Déconnexion
-                        </button>
+                        {isDoctor ? (
+                            <button className="rounded-full bg-slate-900 px-4 py-2 text-sm text-white" onClick={() => setView("medecin")}>Vue médecin</button>
+                        ) : (
+                            <span className="rounded-full bg-slate-900 px-4 py-2 text-sm text-white">Vue assistante</span>
+                        )}
+                        <button className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setUser(null)}>Déconnexion</button>
                     </div>
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                    {view === "assistante" ? (
+                <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+                    {isDoctor ? (
                         <section className={section}>
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
-                                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>
-                                    Priorité {summary.priority}
-                                </span>
-                            </div>
-
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className={label}>Nom complet</label>
-                                    <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={label}>Téléphone</label>
-                                    <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={label}>Âge</label>
-                                    <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className={label}>Sexe</label>
-                                    <select className={input} value={form.sex} onChange={(e) => update("sex", e.target.value)}>
-                                        <option>Femme</option>
-                                        <option>Homme</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={label}>Motif principal</label>
-                                    <select className={input} value={form.mainSymptom} onChange={(e) => update("mainSymptom", e.target.value)}>
-                                        {symptomCatalog.map((s) => <option key={s}>{s}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={label}>Intensité douleur /10</label>
-                                    <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} />
-                                </div>
-                            </div>
-
-                            <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
-                            <div className="grid gap-4 md:grid-cols-3">
-                                <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
-                                <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
-                                <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
-                                <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
-                                <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
-                                <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
-                            </div>
-
-                            <h3 className={"mb-3 mt-6 text-lg font-medium"}>Questionnaire rapide</h3>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div>
-                                    <label className={label}>Début</label>
-                                    <select className={input} value={form.onset} onChange={(e) => update("onset", e.target.value)}>
-                                        <option>Brutal</option>
-                                        <option>Progressif</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={label}>Durée</label>
-                                    <select className={input} value={form.duration} onChange={(e) => update("duration", e.target.value)}>
-                                        <option>{"< 24 h"}</option>
-                                        <option>1–3 jours</option>
-                                        <option>{"> 1 semaine"}</option>
-                                        <option>Chronique</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="mt-6">
-                                <label className={label}>Symptômes associés</label>
-                                <MultiSelectChips options={associatedSymptoms} selected={form.associated} setSelected={(v) => update("associated", v)} />
-                            </div>
-
-                            <div className="mt-6">
-                                <label className={label}>Facteurs de risque / antécédents</label>
-                                <MultiSelectChips options={riskFactorsList} selected={form.risks} setSelected={(v) => update("risks", v)} />
-                            </div>
-
-                            <div className="mt-6">
-                                <label className={label}>Notes assistante</label>
-                                <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
-                            </div>
-
-                            <div className="mt-6 flex flex-wrap gap-3">
-                                <button
-                                    className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50"
-                                    onClick={saveRecord}
-                                    disabled={loading}
-                                >
-                                    {loading ? "Enregistrement..." : "Créer et envoyer au médecin"}
-                                </button>
-                                <button
-                                    className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm"
-                                    onClick={() => setForm(emptyForm)}
-                                >
-                                    Réinitialiser
-                                </button>
-                            </div>
-                        </section>
-                    ) : (
-                        <section className={section}>
-                            <div className="mb-4 flex items-center justify-between">
+                            <div className="mb-4 flex items-center justify-between gap-4">
                                 <h2 className="text-xl font-semibold">Synthèse médecin</h2>
-                                {selectedRecord ? (
-                                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(selectedRecord.priority)}`}>
-                                        Priorité {selectedRecord.priority}
-                                    </span>
-                                ) : null}
+                                <div className="text-xs text-slate-500">{refreshing ? "Actualisation..." : "Synchronisé"}</div>
                             </div>
 
                             {selectedRecord ? (
@@ -752,114 +629,202 @@ export default function CabinetDrHammachYassineV2() {
                                         <div className="rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Patient</div>
                                             <div className="mt-1 font-medium text-slate-900">{selectedRecord.patient_name || "Patient sans nom"}</div>
-                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_age || "?"} ans · {selectedRecord.patient_sex}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_age || "?"} ans · {selectedRecord.patient_sex || "-"}</div>
                                             <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_phone || "Téléphone non renseigné"}</div>
                                         </div>
                                         <div className="rounded-2xl border border-slate-200 p-4">
-                                            <div className="text-sm text-slate-500">Motif et constantes</div>
-                                            <div className="mt-1 font-medium text-slate-900">{selectedRecord.main_symptom}</div>
-                                            <div className="mt-1 text-sm text-slate-600">
-                                                TA {selectedRecord.ta || "-"} · FC {selectedRecord.fc || "-"} · SpO₂ {selectedRecord.spo2 || "-"}% · T {selectedRecord.temperature || "-"}°C
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="text-sm text-slate-500">Statut consultation</div>
+                                                <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(selectedRecord.status || "en_attente")}`}>{(statusOptions.find((s) => s.value === selectedRecord.status)?.label) || "En attente"}</span>
                                             </div>
-                                            <div className="mt-1 text-xs text-slate-500">
-                                                {new Date(selectedRecord.created_at).toLocaleString("fr-FR")}
+                                            <div className="mt-3 text-sm text-slate-600">{new Date(selectedRecord.created_at).toLocaleString("fr-FR")}</div>
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                {statusOptions.map((s) => (
+                                                    <button
+                                                        key={s.value}
+                                                        onClick={() => updateStatus(selectedRecord.id, s.value)}
+                                                        className={`rounded-xl border px-3 py-2 text-xs ${selectedRecord.status === s.value ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-300 text-slate-700"}`}
+                                                    >
+                                                        {s.label}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                                        <div className="text-sm text-slate-500">Alertes immédiates</div>
-                                        {selectedRecord.alerts?.length ? (
-                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {selectedRecord.alerts.map((a) => <li key={a}>{a}</li>)}
-                                            </ul>
-                                        ) : (
-                                            <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                                        <div className="text-sm text-slate-500">Top 3 diagnostics probables</div>
-                                        <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
-                                            {(selectedRecord.diagnoses || []).map((d, i) => (
-                                                <li key={`${d.label}-${i}`}>
-                                                    <span className="font-medium">{d.label}</span>
-                                                    <span className="text-slate-500"> — score {d.score}</span>
-                                                </li>
-                                            ))}
-                                        </ol>
                                     </div>
 
                                     <div className="mt-5 grid gap-4 md:grid-cols-2">
                                         <div className="rounded-2xl border border-slate-200 p-4">
-                                            <div className="text-sm text-slate-500">Examens suggérés</div>
-                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}
-                                            </ul>
+                                            <div className="text-sm text-slate-500">Motif et constantes</div>
+                                            <div className="mt-1 font-medium text-slate-900">{selectedRecord.main_symptom}</div>
+                                            <div className="mt-1 text-sm text-slate-600">TA {selectedRecord.ta || "-"} · FC {selectedRecord.fc || "-"} · SpO₂ {selectedRecord.spo2 || "-"}% · T {selectedRecord.temperature || "-"}°C</div>
                                         </div>
                                         <div className="rounded-2xl border border-slate-200 p-4">
-                                            <div className="text-sm text-slate-500">Conduite suggérée</div>
-                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {(selectedRecord.actions || []).length
-                                                    ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>)
-                                                    : <li>À compléter par l'examen clinique</li>}
-                                            </ul>
-                                        </div>
+                                            <div className="text-sm text-slate-500">Niveau d'urgence</div>
+                                            <div className="mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || " verte")}"></div>
+                                        <div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || "verte")}`}>{selectedRecord.priority || "verte"}</div>
                                     </div>
-
-                                    <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                                        <div className="text-sm text-slate-500">Notes assistante</div>
-                                        <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                                            {selectedRecord.notes || "Aucune note"}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                                    Aucune fiche reçue pour le moment.
                                 </div>
-                            )}
-                        </section>
-                    )}
 
-                    <aside className="space-y-6">
-                        <section className={section}>
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-semibold">Files patient</h2>
-                                <button className="text-xs text-slate-500" onClick={loadRecords}>Actualiser</button>
-                            </div>
-                            <div className="space-y-3 max-h-[70vh] overflow-auto pr-1">
-                                {records.length ? (
-                                    records.map((r) => (
-                                        <PatientCard
-                                            key={r.id}
-                                            p={r}
-                                            onOpen={(id) => {
-                                                setSelectedRecordId(id);
-                                                setView("medecin");
-                                            }}
-                                        />
-                                    ))
+                            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+                                <div className="text-sm text-slate-500">Alertes immédiates</div>
+                                {selectedRecord.alerts?.length ? (
+                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                        {selectedRecord.alerts.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}
+                                    </ul>
                                 ) : (
-                                    <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                                        Aucun patient enregistré.
-                                    </div>
+                                    <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
                                 )}
                             </div>
-                        </section>
 
-                        <section className={section}>
-                            <h2 className="text-lg font-semibold">Notes V2</h2>
-                            <div className="mt-3 space-y-2 text-sm text-slate-700">
-                                <div>• Données synchronisées via Supabase</div>
-                                <div>• Visible sur les deux tablettes</div>
-                                <div>• Rechargement automatique toutes les 3 secondes</div>
-                                <div>• Base prête pour authentification réelle plus tard</div>
+                            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+                                <div className="text-sm text-slate-500">Top 3 diagnostics probables</div>
+                                <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
+                                    {(selectedRecord.diagnoses || []).map((d, i) => (
+                                        <li key={`${d.label}-${i}`}><span className="font-medium">{d.label}</span> <span className="text-slate-500">— score {d.score}</span></li>
+                                    ))}
+                                </ol>
                             </div>
-                        </section>
-                    </aside>
-                </div>
+
+                            <div className="mt-5 grid gap-4 md:grid-cols-2">
+                                <div className="rounded-2xl border border-slate-200 p-4">
+                                    <div className="text-sm text-slate-500">Examens suggérés</div>
+                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                        {(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}
+                                    </ul>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 p-4">
+                                    <div className="text-sm text-slate-500">Conduite suggérée</div>
+                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                        {(selectedRecord.actions || []).length ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>) : <li>À compléter par l'examen clinique</li>}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                                <div className="text-sm text-slate-500">Notes assistante</div>
+                                <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedRecord.notes || "Aucune note"}</div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Aucune fiche reçue pour le moment.</div>
+                    )}
+                </section>
+                ) : (
+                <section className={section}>
+                    <div className="mb-4 flex items-center justify-between">
+                        <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
+                        <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>Priorité {summary.priority}</span>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label className={label}>Nom complet</label>
+                            <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
+                        </div>
+                        <div>
+                            <label className={label}>Téléphone</label>
+                            <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+                        </div>
+                        <div>
+                            <label className={label}>Âge</label>
+                            <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} />
+                        </div>
+                        <div>
+                            <label className={label}>Sexe</label>
+                            <select className={input} value={form.sex} onChange={(e) => update("sex", e.target.value)}>
+                                <option>Femme</option>
+                                <option>Homme</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className={label}>Motif principal</label>
+                            <select className={input} value={form.mainSymptom} onChange={(e) => update("mainSymptom", e.target.value)}>
+                                {symptomCatalog.map((s) => <option key={s}>{s}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className={label}>Intensité douleur /10</label>
+                            <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} />
+                        </div>
+                    </div>
+
+                    <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
+                        <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
+                        <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
+                        <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
+                        <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
+                        <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
+                    </div>
+
+                    <h3 className="mb-3 mt-6 text-lg font-medium">Questionnaire rapide</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label className={label}>Début</label>
+                            <select className={input} value={form.onset} onChange={(e) => update("onset", e.target.value)}>
+                                <option>Brutal</option>
+                                <option>Progressif</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className={label}>Durée</label>
+                            <select className={input} value={form.duration} onChange={(e) => update("duration", e.target.value)}>
+                                <option>{"< 24 h"}</option>
+                                <option>1–3 jours</option>
+                                <option>{"> 1 semaine"}</option>
+                                <option>Chronique</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <label className={label}>Symptômes associés</label>
+                        <MultiSelectChips options={associatedSymptoms} selected={form.associated} setSelected={(v) => update("associated", v)} />
+                    </div>
+
+                    <div className="mt-6">
+                        <label className={label}>Facteurs de risque / antécédents</label>
+                        <MultiSelectChips options={riskFactorsList} selected={form.risks} setSelected={(v) => update("risks", v)} />
+                    </div>
+
+                    <div className="mt-6">
+                        <label className={label}>Notes assistante</label>
+                        <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50" onClick={saveRecord} disabled={loading}>{loading ? "Enregistrement..." : "Créer et envoyer au médecin"}</button>
+                        <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm" onClick={() => setForm(emptyForm)}>Réinitialiser</button>
+                    </div>
+                </section>
+          )}
+
+                <aside className="space-y-6">
+                    <section className={section}>
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <h2 className="text-lg font-semibold">Files patient</h2>
+                            <button className="text-xs text-slate-500 underline" onClick={loadRecords}>Actualiser</button>
+                        </div>
+                        <SearchInput value={search} onChange={setSearch} />
+                        <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
+                            {filteredRecords.length ? filteredRecords.map((r) => <PatientCard key={r.id} p={r} onOpen={(id) => { setSelectedRecordId(id); if (isDoctor) setView("medecin"); }} canSeeClinical={isDoctor} />) : <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun patient enregistré.</div>}
+                        </div>
+                    </section>
+
+                    <section className={section}>
+                        <h2 className="text-lg font-semibold">Notes V3</h2>
+                        <div className="mt-3 space-y-2 text-sm text-slate-700">
+                            <div>• Assistante limitée à la création des fiches</div>
+                            <div>• Interface médecin séparée</div>
+                            <div>• Recherche patient intégrée</div>
+                            <div>• Statut : en attente / vu / terminé</div>
+                            <div>• Synchronisation cloud Supabase</div>
+                        </div>
+                    </section>
+                </aside>
             </div>
         </div>
-    );
+    </div >
+  );
 }
