@@ -588,6 +588,11 @@ function PatientCard({ p, onOpen, canSeeClinical }) {
     );
 }
 
+// V7 plan intégré :
+// - Assistant IA visible uniquement côté médecin
+// - Design plus professionnel à implémenter sur la prochaine itération
+// - Header plus propre, cartes plus aérées, hiérarchie visuelle renforcée
+// - Zone consultation médecin enrichie avec un futur bouton "Assistant IA"
 export default function CabinetDrHammachYassineV61() {
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState("consultation");
