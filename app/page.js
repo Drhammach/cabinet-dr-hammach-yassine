@@ -7,6 +7,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+const ASSISTANTE_PIN = process.env.NEXT_PUBLIC_ASSISTANTE_PIN || "1234";
+const MEDECIN_PIN = process.env.NEXT_PUBLIC_MEDECIN_PIN || "2026";
+
 const symptomCatalog = [
     "Douleur thoracique",
     "Dyspnée",
@@ -66,8 +69,8 @@ const statusOptions = [
 ];
 
 const demoUsers = {
-    assistante: { role: "assistante", name: "Assistante", pin: "1234" },
-    medecin: { role: "medecin", name: "Dr Hammach Yassine", pin: "2026" },
+    assistante: { role: "assistante", name: "Assistante", pin: ASSISTANTE_PIN },
+    medecin: { role: "medecin", name: "Dr Hammach Yassine", pin: MEDECIN_PIN },
 };
 
 const emptyForm = {
@@ -359,6 +362,17 @@ function MultiSelectChips({ options, selected, setSelected }) {
     );
 }
 
+function SearchInput({ value, onChange }) {
+    return (
+        <input
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Rechercher nom, téléphone ou motif"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+        />
+    );
+}
+
 function LoginScreen({ onLogin }) {
     const [role, setRole] = useState("assistante");
     const [pin, setPin] = useState("");
@@ -378,7 +392,7 @@ function LoginScreen({ onLogin }) {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
             <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h1 className="text-2xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                <p className="mt-2 text-sm text-slate-600">V3 — accès assistante limité + interface médecin renforcée</p>
+                <p className="mt-2 text-sm text-slate-600">V4 — accès restreint assistante, PIN personnalisables, notes médecin</p>
                 <div className="mt-6 space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Rôle</label>
@@ -389,25 +403,14 @@ function LoginScreen({ onLogin }) {
                     </div>
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Code PIN</label>
-                        <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="1234 ou 2026" />
+                        <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="Code PIN" />
                     </div>
                     {error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
                     <button className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white" onClick={submit}>Se connecter</button>
-                    <div className="text-xs text-slate-500">Démo : Assistante = 1234 · Médecin = 2026</div>
+                    <div className="text-xs text-slate-500">Tu peux personnaliser les PIN avec NEXT_PUBLIC_ASSISTANTE_PIN et NEXT_PUBLIC_MEDECIN_PIN.</div>
                 </div>
             </div>
         </div>
-    );
-}
-
-function SearchInput({ value, onChange }) {
-    return (
-        <input
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Rechercher nom, téléphone ou motif"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-        />
     );
 }
 
@@ -425,20 +428,22 @@ function PatientCard({ p, onOpen, canSeeClinical }) {
                     <span className={`rounded-full border px-2.5 py-1 text-xs ${badgeColor(p.priority || "verte")}`}>{p.priority || "verte"}</span>
                 </div>
             </div>
-            <div className="mt-3 text-sm text-slate-700">{canSeeClinical ? (p.diagnoses?.[0]?.label || "Aucun diagnostic") : (p.notes ? "Fiche renseignée" : "Fiche en attente")}</div>
+            <div className="mt-3 text-sm text-slate-700">{canSeeClinical ? (p.diagnoses?.[0]?.label || "Aucun diagnostic") : "Fiche patient"}</div>
         </button>
     );
 }
 
-export default function CabinetDrHammachYassineV3() {
+export default function CabinetDrHammachYassineV4() {
     const [user, setUser] = useState(null);
     const [view, setView] = useState("assistante");
     const [form, setForm] = useState(emptyForm);
     const [records, setRecords] = useState([]);
     const [selectedRecordId, setSelectedRecordId] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [search, setSearch] = useState("");
     const [refreshing, setRefreshing] = useState(false);
+    const [search, setSearch] = useState("");
+    const [doctorNotesDraft, setDoctorNotesDraft] = useState("");
+    const [savingDoctorNotes, setSavingDoctorNotes] = useState(false);
 
     const section = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
     const label = "mb-1 block text-sm font-medium text-slate-700";
@@ -455,6 +460,8 @@ export default function CabinetDrHammachYassineV3() {
             .select(`
         id,
         status,
+        doctor_notes,
+        seen_by_doctor_at,
         main_symptom,
         priority,
         alerts,
@@ -468,6 +475,7 @@ export default function CabinetDrHammachYassineV3() {
         temperature,
         created_at,
         patients (
+          id,
           full_name,
           age,
           sex,
@@ -480,6 +488,8 @@ export default function CabinetDrHammachYassineV3() {
             const normalized = (data || []).map((row) => ({
                 id: row.id,
                 status: row.status || "en_attente",
+                doctor_notes: row.doctor_notes || "",
+                seen_by_doctor_at: row.seen_by_doctor_at || null,
                 main_symptom: row.main_symptom,
                 priority: row.priority || "verte",
                 alerts: row.alerts || [],
@@ -492,6 +502,7 @@ export default function CabinetDrHammachYassineV3() {
                 spo2: row.spo2 || "",
                 temperature: row.temperature || "",
                 created_at: row.created_at,
+                patient_id: row.patients?.id || "",
                 patient_name: row.patients?.full_name || "",
                 patient_age: row.patients?.age || "",
                 patient_sex: row.patients?.sex || "",
@@ -516,14 +527,66 @@ export default function CabinetDrHammachYassineV3() {
     const filteredRecords = useMemo(() => {
         const q = search.trim().toLowerCase();
         if (!q) return records;
-        return records.filter((r) =>
-            [r.patient_name, r.patient_phone, r.main_symptom]
-                .filter(Boolean)
-                .some((v) => String(v).toLowerCase().includes(q))
-        );
+        return records.filter((r) => [r.patient_name, r.patient_phone, r.main_symptom].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)));
     }, [records, search]);
 
     const selectedRecord = useMemo(() => records.find((r) => r.id === selectedRecordId) || null, [records, selectedRecordId]);
+
+    useEffect(() => {
+        setDoctorNotesDraft(selectedRecord?.doctor_notes || "");
+    }, [selectedRecordId, selectedRecord?.doctor_notes]);
+
+    const findOrCreatePatient = async () => {
+        if (!supabase) return null;
+        const phone = (form.phone || "").trim();
+        const fullName = (form.fullName || "").trim();
+
+        if (phone) {
+            const { data: existingByPhone } = await supabase
+                .from("patients")
+                .select("id, full_name, age, sex, phone")
+                .eq("phone", phone)
+                .limit(1)
+                .maybeSingle();
+            if (existingByPhone) {
+                await supabase
+                    .from("patients")
+                    .update({ full_name: fullName || existingByPhone.full_name, age: form.age ? Number(form.age) : existingByPhone.age, sex: form.sex || existingByPhone.sex })
+                    .eq("id", existingByPhone.id);
+                return existingByPhone.id;
+            }
+        }
+
+        if (fullName) {
+            const { data: existingByName } = await supabase
+                .from("patients")
+                .select("id")
+                .ilike("full_name", fullName)
+                .limit(1)
+                .maybeSingle();
+            if (existingByName) {
+                await supabase
+                    .from("patients")
+                    .update({ age: form.age ? Number(form.age) : null, sex: form.sex, phone: phone || null })
+                    .eq("id", existingByName.id);
+                return existingByName.id;
+            }
+        }
+
+        const { data: patient, error: patientError } = await supabase
+            .from("patients")
+            .insert({
+                full_name: fullName,
+                age: form.age ? Number(form.age) : null,
+                sex: form.sex,
+                phone: phone || null,
+            })
+            .select()
+            .single();
+
+        if (patientError) throw patientError;
+        return patient.id;
+    };
 
     const saveRecord = async () => {
         if (!supabase) {
@@ -532,25 +595,16 @@ export default function CabinetDrHammachYassineV3() {
         }
         try {
             setLoading(true);
-            const { data: patient, error: patientError } = await supabase
-                .from("patients")
-                .insert({
-                    full_name: form.fullName,
-                    age: form.age ? Number(form.age) : null,
-                    sex: form.sex,
-                    phone: form.phone,
-                })
-                .select()
-                .single();
-            if (patientError) throw patientError;
-
+            const patientId = await findOrCreatePatient();
             const clinical = computeClinicalSummary(form);
             const { data: triage, error: triageError } = await supabase
                 .from("triage_forms")
                 .insert({
-                    patient_id: patient.id,
+                    patient_id: patientId,
                     created_by: user?.name || "Assistante",
                     status: "en_attente",
+                    doctor_notes: "",
+                    seen_by_doctor_at: null,
                     main_symptom: form.mainSymptom,
                     onset: form.onset,
                     duration: form.duration,
@@ -573,7 +627,6 @@ export default function CabinetDrHammachYassineV3() {
                 .select()
                 .single();
             if (triageError) throw triageError;
-
             setForm(emptyForm);
             setView("assistante");
             await loadRecords();
@@ -588,10 +641,32 @@ export default function CabinetDrHammachYassineV3() {
 
     const updateStatus = async (recordId, status) => {
         if (!supabase || !isDoctor) return;
-        const { error } = await supabase.from("triage_forms").update({ status }).eq("id", recordId);
+        const payload = {
+            status,
+            seen_by_doctor_at: status === "vu" || status === "termine" ? new Date().toISOString() : null,
+        };
+        const { error } = await supabase.from("triage_forms").update(payload).eq("id", recordId);
         if (!error) {
             await loadRecords();
             setSelectedRecordId(recordId);
+        }
+    };
+
+    const saveDoctorNotes = async () => {
+        if (!supabase || !isDoctor || !selectedRecord) return;
+        try {
+            setSavingDoctorNotes(true);
+            const { error } = await supabase
+                .from("triage_forms")
+                .update({ doctor_notes: doctorNotesDraft })
+                .eq("id", selectedRecord.id);
+            if (error) throw error;
+            await loadRecords();
+        } catch (e) {
+            console.error(e);
+            alert("Erreur lors de l'enregistrement des notes médecin");
+        } finally {
+            setSavingDoctorNotes(false);
         }
     };
 
@@ -603,7 +678,7 @@ export default function CabinetDrHammachYassineV3() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                        <p className="mt-1 text-slate-600">V3 — accès assistante restreint, statut patient, recherche et suivi médecin</p>
+                        <p className="mt-1 text-slate-600">V4 — assistant cabinet synchronisé, accès assistante limité, notes médecin et suivi renforcé</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {isDoctor ? (
@@ -617,7 +692,7 @@ export default function CabinetDrHammachYassineV3() {
 
                 <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
                     {isDoctor ? (
-                        <section className={section}>
+                        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                             <div className="mb-4 flex items-center justify-between gap-4">
                                 <h2 className="text-xl font-semibold">Synthèse médecin</h2>
                                 <div className="text-xs text-slate-500">{refreshing ? "Actualisation..." : "Synchronisé"}</div>
@@ -637,7 +712,8 @@ export default function CabinetDrHammachYassineV3() {
                                                 <div className="text-sm text-slate-500">Statut consultation</div>
                                                 <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(selectedRecord.status || "en_attente")}`}>{(statusOptions.find((s) => s.value === selectedRecord.status)?.label) || "En attente"}</span>
                                             </div>
-                                            <div className="mt-3 text-sm text-slate-600">{new Date(selectedRecord.created_at).toLocaleString("fr-FR")}</div>
+                                            <div className="mt-3 text-sm text-slate-600">Créée le {new Date(selectedRecord.created_at).toLocaleString("fr-FR")}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.seen_by_doctor_at ? `Vue le ${new Date(selectedRecord.seen_by_doctor_at).toLocaleString("fr-FR")}` : "Pas encore vue par le médecin"}</div>
                                             <div className="mt-3 flex flex-wrap gap-2">
                                                 {statusOptions.map((s) => (
                                                     <button
@@ -660,171 +736,190 @@ export default function CabinetDrHammachYassineV3() {
                                         </div>
                                         <div className="rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Niveau d'urgence</div>
-                                            <div className="mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || " verte")}"></div>
-                                        <div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || "verte")}`}>{selectedRecord.priority || "verte"}</div>
+                                            <div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || "verte")}`}>{selectedRecord.priority || "verte"}</div>
+                                        </div>
                                     </div>
-                                </div>
 
-                            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                                <div className="text-sm text-slate-500">Alertes immédiates</div>
-                                {selectedRecord.alerts?.length ? (
-                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                        {selectedRecord.alerts.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}
-                                    </ul>
-                                ) : (
-                                    <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
+                                    <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+                                        <div className="text-sm text-slate-500">Alertes immédiates</div>
+                                        {selectedRecord.alerts?.length ? (
+                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                                {selectedRecord.alerts.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}
+                                            </ul>
+                                        ) : (
+                                            <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+                                        <div className="text-sm text-slate-500">Top 3 diagnostics probables</div>
+                                        <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
+                                            {(selectedRecord.diagnoses || []).map((d, i) => (
+                                                <li key={`${d.label}-${i}`}><span className="font-medium">{d.label}</span> <span className="text-slate-500">— score {d.score}</span></li>
+                                            ))}
+                                        </ol>
+                                    </div>
+
+                                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                                        <div className="rounded-2xl border border-slate-200 p-4">
+                                            <div className="text-sm text-slate-500">Examens suggérés</div>
+                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                                {(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}
+                                            </ul>
+                                        </div>
+                                        <div className="rounded-2xl border border-slate-200 p-4">
+                                            <div className="text-sm text-slate-500">Conduite suggérée</div>
+                                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                                {(selectedRecord.actions || []).length ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>) : <li>À compléter par l'examen clinique</li>}
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                                        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                                            <div className="text-sm text-slate-500">Notes assistante</div>
+                                            <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedRecord.notes || "Aucune note"}</div>
+                                        </div>
+                                        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                                            <div className="text-sm text-slate-500">Notes médecin</div>
+                                            <textarea className="mt-2 min-h-32 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={doctorNotesDraft} onChange={(e) => setDoctorNotesDraft(e.target.value)} placeholder="Observations, examen clinique, conduite, prescription..." />
+                                            <button className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50" onClick={saveDoctorNotes} disabled={savingDoctorNotes}>{savingDoctorNotes ? "Enregistrement..." : "Enregistrer les notes médecin"}</button>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Aucune fiche reçue pour le moment.</div>
+                            )}
+                        </section>
+                    ) : (
+                        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
+                                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>Priorité {summary.priority}</span>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Nom complet</label>
+                                    <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Téléphone</label>
+                                    <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Âge</label>
+                                    <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Sexe</label>
+                                    <select className={input} value={form.sex} onChange={(e) => update("sex", e.target.value)}>
+                                        <option>Femme</option>
+                                        <option>Homme</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Motif principal</label>
+                                    <select className={input} value={form.mainSymptom} onChange={(e) => update("mainSymptom", e.target.value)}>
+                                        {symptomCatalog.map((s) => <option key={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Intensité douleur /10</label>
+                                    <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} />
+                                </div>
+                            </div>
+
+                            <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
+                                <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
+                                <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
+                                <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
+                                <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
+                                <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
+                            </div>
+
+                            <h3 className="mb-3 mt-6 text-lg font-medium">Questionnaire rapide</h3>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label className={label}>Début</label>
+                                    <select className={input} value={form.onset} onChange={(e) => update("onset", e.target.value)}>
+                                        <option>Brutal</option>
+                                        <option>Progressif</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={label}>Durée</label>
+                                    <select className={input} value={form.duration} onChange={(e) => update("duration", e.target.value)}>
+                                        <option>{"< 24 h"}</option>
+                                        <option>1–3 jours</option>
+                                        <option>{"> 1 semaine"}</option>
+                                        <option>Chronique</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="mt-6">
+                                <label className={label}>Symptômes associés</label>
+                                <MultiSelectChips options={associatedSymptoms} selected={form.associated} setSelected={(v) => update("associated", v)} />
+                            </div>
+
+                            <div className="mt-6">
+                                <label className={label}>Facteurs de risque / antécédents</label>
+                                <MultiSelectChips options={riskFactorsList} selected={form.risks} setSelected={(v) => update("risks", v)} />
+                            </div>
+
+                            <div className="mt-6">
+                                <label className={label}>Notes assistante</label>
+                                <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50" onClick={saveRecord} disabled={loading}>{loading ? "Enregistrement..." : "Créer et envoyer au médecin"}</button>
+                                <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm" onClick={() => setForm(emptyForm)}>Réinitialiser</button>
+                            </div>
+                        </section>
+                    )}
+
+                    <aside className="space-y-6">
+                        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <h2 className="text-lg font-semibold">Files patient</h2>
+                                <button className="text-xs text-slate-500 underline" onClick={loadRecords}>Actualiser</button>
+                            </div>
+                            <SearchInput value={search} onChange={setSearch} />
+                            <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
+                                {filteredRecords.length ? filteredRecords.map((r) => (
+                                    <PatientCard
+                                        key={r.id}
+                                        p={r}
+                                        onOpen={(id) => {
+                                            setSelectedRecordId(id);
+                                            if (isDoctor) setView("medecin");
+                                        }}
+                                        canSeeClinical={isDoctor}
+                                    />
+                                )) : (
+                                    <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun patient enregistré.</div>
                                 )}
                             </div>
+                        </section>
 
-                            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                                <div className="text-sm text-slate-500">Top 3 diagnostics probables</div>
-                                <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
-                                    {(selectedRecord.diagnoses || []).map((d, i) => (
-                                        <li key={`${d.label}-${i}`}><span className="font-medium">{d.label}</span> <span className="text-slate-500">— score {d.score}</span></li>
-                                    ))}
-                                </ol>
+                        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <h2 className="text-lg font-semibold">Notes V4</h2>
+                            <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                <div>• Assistante limitée à la création de fiches</div>
+                                <div>• Médecin seul voit l'analyse clinique</div>
+                                <div>• PIN personnalisables via variables Vercel</div>
+                                <div>• Évite les doublons patients par téléphone / nom</div>
+                                <div>• Statut + date de visualisation médecin</div>
+                                <div>• Notes médecin enregistrées dans Supabase</div>
                             </div>
-
-                            <div className="mt-5 grid gap-4 md:grid-cols-2">
-                                <div className="rounded-2xl border border-slate-200 p-4">
-                                    <div className="text-sm text-slate-500">Examens suggérés</div>
-                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                        {(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}
-                                    </ul>
-                                </div>
-                                <div className="rounded-2xl border border-slate-200 p-4">
-                                    <div className="text-sm text-slate-500">Conduite suggérée</div>
-                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                        {(selectedRecord.actions || []).length ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>) : <li>À compléter par l'examen clinique</li>}
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                                <div className="text-sm text-slate-500">Notes assistante</div>
-                                <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedRecord.notes || "Aucune note"}</div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Aucune fiche reçue pour le moment.</div>
-                    )}
-                </section>
-                ) : (
-                <section className={section}>
-                    <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>Priorité {summary.priority}</span>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label className={label}>Nom complet</label>
-                            <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
-                        </div>
-                        <div>
-                            <label className={label}>Téléphone</label>
-                            <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} />
-                        </div>
-                        <div>
-                            <label className={label}>Âge</label>
-                            <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} />
-                        </div>
-                        <div>
-                            <label className={label}>Sexe</label>
-                            <select className={input} value={form.sex} onChange={(e) => update("sex", e.target.value)}>
-                                <option>Femme</option>
-                                <option>Homme</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className={label}>Motif principal</label>
-                            <select className={input} value={form.mainSymptom} onChange={(e) => update("mainSymptom", e.target.value)}>
-                                {symptomCatalog.map((s) => <option key={s}>{s}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className={label}>Intensité douleur /10</label>
-                            <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} />
-                        </div>
-                    </div>
-
-                    <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
-                        <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
-                        <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
-                        <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
-                        <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
-                        <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
-                    </div>
-
-                    <h3 className="mb-3 mt-6 text-lg font-medium">Questionnaire rapide</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label className={label}>Début</label>
-                            <select className={input} value={form.onset} onChange={(e) => update("onset", e.target.value)}>
-                                <option>Brutal</option>
-                                <option>Progressif</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className={label}>Durée</label>
-                            <select className={input} value={form.duration} onChange={(e) => update("duration", e.target.value)}>
-                                <option>{"< 24 h"}</option>
-                                <option>1–3 jours</option>
-                                <option>{"> 1 semaine"}</option>
-                                <option>Chronique</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="mt-6">
-                        <label className={label}>Symptômes associés</label>
-                        <MultiSelectChips options={associatedSymptoms} selected={form.associated} setSelected={(v) => update("associated", v)} />
-                    </div>
-
-                    <div className="mt-6">
-                        <label className={label}>Facteurs de risque / antécédents</label>
-                        <MultiSelectChips options={riskFactorsList} selected={form.risks} setSelected={(v) => update("risks", v)} />
-                    </div>
-
-                    <div className="mt-6">
-                        <label className={label}>Notes assistante</label>
-                        <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap gap-3">
-                        <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50" onClick={saveRecord} disabled={loading}>{loading ? "Enregistrement..." : "Créer et envoyer au médecin"}</button>
-                        <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm" onClick={() => setForm(emptyForm)}>Réinitialiser</button>
-                    </div>
-                </section>
-          )}
-
-                <aside className="space-y-6">
-                    <section className={section}>
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                            <h2 className="text-lg font-semibold">Files patient</h2>
-                            <button className="text-xs text-slate-500 underline" onClick={loadRecords}>Actualiser</button>
-                        </div>
-                        <SearchInput value={search} onChange={setSearch} />
-                        <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
-                            {filteredRecords.length ? filteredRecords.map((r) => <PatientCard key={r.id} p={r} onOpen={(id) => { setSelectedRecordId(id); if (isDoctor) setView("medecin"); }} canSeeClinical={isDoctor} />) : <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun patient enregistré.</div>}
-                        </div>
-                    </section>
-
-                    <section className={section}>
-                        <h2 className="text-lg font-semibold">Notes V3</h2>
-                        <div className="mt-3 space-y-2 text-sm text-slate-700">
-                            <div>• Assistante limitée à la création des fiches</div>
-                            <div>• Interface médecin séparée</div>
-                            <div>• Recherche patient intégrée</div>
-                            <div>• Statut : en attente / vu / terminé</div>
-                            <div>• Synchronisation cloud Supabase</div>
-                        </div>
-                    </section>
-                </aside>
+                        </section>
+                    </aside>
+                </div>
             </div>
         </div>
-    </div >
-  );
+    );
 }
