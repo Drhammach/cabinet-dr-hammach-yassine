@@ -283,14 +283,8 @@ function computeClinicalSummary(form) {
 
         case "Fièvre": {
             diagnoses.push({ label: "Infection virale", score: 55 });
-            diagnoses.push({
-                label: "Infection urinaire",
-                score: has("Brûlures urinaires") ? 70 : 25,
-            });
-            diagnoses.push({
-                label: "Pneumonie",
-                score: has("Toux") || has("Dyspnée") ? 70 : 30,
-            });
+            diagnoses.push({ label: "Infection urinaire", score: has("Brûlures urinaires") ? 70 : 25 });
+            diagnoses.push({ label: "Pneumonie", score: has("Toux") || has("Dyspnée") ? 70 : 30 });
             exams.add("NFS");
             exams.add("CRP");
             if (has("Brûlures urinaires")) exams.add("BU");
@@ -304,10 +298,7 @@ function computeClinicalSummary(form) {
         case "Douleur lombaire": {
             diagnoses.push({ label: "Lombosciatique", score: 75 });
             diagnoses.push({ label: "Lombalgie mécanique", score: 70 });
-            diagnoses.push({
-                label: "Colique néphrétique",
-                score: has("Brûlures urinaires") ? 30 : 45,
-            });
+            diagnoses.push({ label: "Colique néphrétique", score: has("Brûlures urinaires") ? 30 : 45 });
             exams.add("Examen neurologique des membres inférieurs");
             actions.add("Rechercher rétention urinaire, anesthésie en selle, déficit moteur");
             break;
@@ -414,13 +405,11 @@ function generateManagementSuggestions(selectedRecord) {
         ],
     };
 
-    return (
-        plans[topDx] || [
-            "Vérifier les diagnostics différentiels et les red flags",
-            "Adapter bilan, traitement et orientation au contexte clinique",
-            "Tracer la décision finale dans les notes médecin",
-        ]
-    );
+    return plans[topDx] || [
+        "Vérifier les diagnostics différentiels et les red flags",
+        "Adapter bilan, traitement et orientation au contexte clinique",
+        "Tracer la décision finale dans les notes médecin",
+    ];
 }
 
 function generatePrescriptionSuggestions(selectedRecord) {
@@ -445,13 +434,11 @@ function generatePrescriptionSuggestions(selectedRecord) {
         ],
     };
 
-    return (
-        suggestions[topDx] || [
-            "Mesure thérapeutique à adapter au diagnostic retenu",
-            "Réévaluer après examen clinique complet",
-            "Formaliser la prescription / orientation dans les notes médecin",
-        ]
-    );
+    return suggestions[topDx] || [
+        "Mesure thérapeutique à adapter au diagnostic retenu",
+        "Réévaluer après examen clinique complet",
+        "Formaliser la prescription / orientation dans les notes médecin",
+    ];
 }
 
 function NavButton({ active, onClick, children }) {
@@ -468,9 +455,7 @@ function NavButton({ active, onClick, children }) {
 
 function MultiSelectChips({ options, selected, setSelected }) {
     const toggle = (option) => {
-        setSelected(
-            selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option]
-        );
+        setSelected(selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option]);
     };
 
     return (
@@ -482,9 +467,7 @@ function MultiSelectChips({ options, selected, setSelected }) {
                         type="button"
                         key={option}
                         onClick={() => toggle(option)}
-                        className={`rounded-full border px-3 py-1.5 text-xs ${active
-                                ? "bg-slate-900 text-white border-slate-900"
-                                : "bg-white text-slate-700 border-slate-300"
+                        className={`rounded-full border px-3 py-1.5 text-xs ${active ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300"
                             }`}
                     >
                         {option}
@@ -526,9 +509,7 @@ function AgendaView({ appointments, onStatusChange }) {
                         </div>
                         <div className="mt-3 space-y-3">
                             {grouped[date]
-                                .sort((a, b) =>
-                                    String(a.appointment_time || "").localeCompare(String(b.appointment_time || ""))
-                                )
+                                .sort((a, b) => String(a.appointment_time || "").localeCompare(String(b.appointment_time || "")))
                                 .map((a) => (
                                     <div key={a.id} className="rounded-xl border border-slate-100 p-3">
                                         <div className="flex items-start justify-between gap-3">
@@ -539,13 +520,8 @@ function AgendaView({ appointments, onStatusChange }) {
                                                 <div className="mt-1 text-sm text-slate-600">{a.phone || "-"}</div>
                                                 <div className="mt-1 text-sm text-slate-600">{a.reason || "-"}</div>
                                             </div>
-                                            <span
-                                                className={`rounded-full border px-2.5 py-1 text-xs ${appointmentColor(
-                                                    a.status || "planifie"
-                                                )}`}
-                                            >
-                                                {(appointmentStatusOptions.find((s) => s.value === a.status)?.label) ||
-                                                    "Planifié"}
+                                            <span className={`rounded-full border px-2.5 py-1 text-xs ${appointmentColor(a.status || "planifie")}`}>
+                                                {(appointmentStatusOptions.find((s) => s.value === a.status)?.label) || "Planifié"}
                                             </span>
                                         </div>
                                         <div className="mt-3 flex flex-wrap gap-2">
@@ -601,11 +577,7 @@ function LoginScreen({ onLogin }) {
                 <div className="mt-6 space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Rôle</label>
-                        <select
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                        >
+                        <select className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
                             <option value="assistante">Assistante</option>
                             <option value="medecin">Médecin</option>
                         </select>
@@ -622,14 +594,9 @@ function LoginScreen({ onLogin }) {
                         />
                     </div>
 
-                    {error ? (
-                        <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-                    ) : null}
+                    {error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
 
-                    <button
-                        className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white"
-                        onClick={submit}
-                    >
+                    <button className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white" onClick={submit}>
                         Se connecter
                     </button>
                 </div>
@@ -650,24 +617,14 @@ function PatientCard({ p, onOpen, canSeeClinical }) {
                     <div className="mt-1 text-sm text-slate-600">
                         {p.patient_age || "?"} ans · {p.patient_sex || "-"} · {p.main_symptom}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                        {new Date(p.created_at).toLocaleString("fr-FR")}
-                    </div>
+                    <div className="mt-1 text-xs text-slate-500">{new Date(p.created_at).toLocaleString("fr-FR")}</div>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                    <span
-                        className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(
-                            p.status || "en_attente"
-                        )}`}
-                    >
+                    <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(p.status || "en_attente")}`}>
                         {(statusOptions.find((s) => s.value === p.status)?.label) || "En attente"}
                     </span>
-                    <span
-                        className={`rounded-full border px-2.5 py-1 text-xs ${badgeColor(
-                            p.priority || "verte"
-                        )}`}
-                    >
+                    <span className={`rounded-full border px-2.5 py-1 text-xs ${badgeColor(p.priority || "verte")}`}>
                         {p.priority || "verte"}
                     </span>
                 </div>
@@ -680,7 +637,7 @@ function PatientCard({ p, onOpen, canSeeClinical }) {
     );
 }
 
-export default function CabinetDrHammachYassineV7() {
+export default function CabinetDrHammachYassineV8() {
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState("consultation");
 
@@ -728,14 +685,19 @@ export default function CabinetDrHammachYassineV7() {
     const [aiResult, setAiResult] = useState(null);
     const [aiError, setAiError] = useState("");
 
+    const [docLoading, setDocLoading] = useState(false);
+    const [docError, setDocError] = useState("");
+    const [docType, setDocType] = useState("ordonnance");
+    const [generatedDoc, setGeneratedDoc] = useState(null);
+    const [generatedDocText, setGeneratedDocText] = useState("");
+
     const section = "rounded-3xl border border-slate-200 bg-white p-6 shadow-md";
     const label = "mb-1 block text-sm font-medium text-slate-700";
     const input =
         "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
 
     const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-    const updateAppointment = (key, value) =>
-        setAppointmentForm((prev) => ({ ...prev, [key]: value }));
+    const updateAppointment = (key, value) => setAppointmentForm((prev) => ({ ...prev, [key]: value }));
 
     const summary = useMemo(() => computeClinicalSummary(form), [form]);
     const isDoctor = user?.role === "medecin";
@@ -790,17 +752,15 @@ export default function CabinetDrHammachYassineV7() {
 
     useEffect(() => {
         setDoctorNotesDraft(selectedRecord?.doctor_notes || "");
+        setAiResult(null);
+        setAiError("");
+        setGeneratedDoc(null);
+        setGeneratedDocText("");
+        setDocError("");
     }, [selectedRecordId, selectedRecord?.doctor_notes]);
 
-    const managementSuggestions = useMemo(
-        () => generateManagementSuggestions(selectedRecord),
-        [selectedRecord]
-    );
-
-    const therapeuticSuggestions = useMemo(
-        () => generatePrescriptionSuggestions(selectedRecord),
-        [selectedRecord]
-    );
+    const managementSuggestions = useMemo(() => generateManagementSuggestions(selectedRecord), [selectedRecord]);
+    const therapeuticSuggestions = useMemo(() => generatePrescriptionSuggestions(selectedRecord), [selectedRecord]);
 
     const filteredRecords = useMemo(() => {
         const q = searchRecords.trim().toLowerCase();
@@ -856,11 +816,7 @@ export default function CabinetDrHammachYassineV7() {
             const res = await fetch("/api/data/create-consultation", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    user,
-                    form,
-                    summary: computeClinicalSummary(form),
-                }),
+                body: JSON.stringify({ user, form, summary: computeClinicalSummary(form) }),
             });
 
             const json = await res.json();
@@ -1062,9 +1018,7 @@ export default function CabinetDrHammachYassineV7() {
             });
 
             const json = await res.json();
-            if (!res.ok || !json.ok) {
-                throw new Error(json?.error || "Erreur IA");
-            }
+            if (!res.ok || !json.ok) throw new Error(json?.error || "Erreur IA");
 
             setAiResult(json.data);
         } catch (err) {
@@ -1072,6 +1026,62 @@ export default function CabinetDrHammachYassineV7() {
             setAiError("Impossible de lancer l'assistant IA.");
         } finally {
             setAiLoading(false);
+        }
+    };
+
+    const generateMedicalDocument = async (type) => {
+        if (!isDoctor || !selectedRecord) return;
+
+        try {
+            setDocLoading(true);
+            setDocError("");
+            setGeneratedDoc(null);
+            setGeneratedDocText("");
+            setDocType(type);
+
+            const payload = {
+                documentType: type,
+                patient: {
+                    nom: selectedRecord.patient_name || "",
+                    age: selectedRecord.patient_age || "",
+                    sexe: selectedRecord.patient_sex || "",
+                    telephone: selectedRecord.patient_phone || "",
+                },
+                consultation: {
+                    motif: selectedRecord.main_symptom || "",
+                    ta: selectedRecord.ta || "",
+                    fc: selectedRecord.fc || "",
+                    spo2: selectedRecord.spo2 || "",
+                    temperature: selectedRecord.temperature || "",
+                    priorite: selectedRecord.priority || "",
+                    diagnostics_probables_algorithme: selectedRecord.diagnoses || [],
+                    alertes_algorithme: selectedRecord.alerts || [],
+                    examens_algorithme: selectedRecord.exams || [],
+                    conduite_algorithme: selectedRecord.actions || [],
+                    status: selectedRecord.status || "",
+                },
+                notes:
+                    `Notes assistante:\n${selectedRecord.notes || ""}\n\n` +
+                    `Notes médecin:\n${doctorNotesDraft || ""}`,
+                aiAnalysis: aiResult || null,
+            };
+
+            const res = await fetch("/api/generate-medical-document", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const json = await res.json();
+            if (!res.ok || !json.ok) throw new Error(json?.error || "Erreur document");
+
+            setGeneratedDoc(json.data);
+            setGeneratedDocText(json.data.contenu || "");
+        } catch (error) {
+            console.error(error);
+            setDocError("Impossible de générer le document.");
+        } finally {
+            setDocLoading(false);
         }
     };
 
@@ -1126,9 +1136,7 @@ export default function CabinetDrHammachYassineV7() {
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Patient</div>
-                                                <div className="mt-1 font-medium text-slate-900">
-                                                    {selectedRecord.patient_name || "Patient sans nom"}
-                                                </div>
+                                                <div className="mt-1 font-medium text-slate-900">{selectedRecord.patient_name || "Patient sans nom"}</div>
                                                 <div className="mt-1 text-sm text-slate-600">
                                                     {selectedRecord.patient_age || "?"} ans · {selectedRecord.patient_sex || "-"}
                                                 </div>
@@ -1140,13 +1148,8 @@ export default function CabinetDrHammachYassineV7() {
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="flex items-center justify-between gap-2">
                                                     <div className="text-sm text-slate-500">Statut consultation</div>
-                                                    <span
-                                                        className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(
-                                                            selectedRecord.status || "en_attente"
-                                                        )}`}
-                                                    >
-                                                        {(statusOptions.find((s) => s.value === selectedRecord.status)?.label) ||
-                                                            "En attente"}
+                                                    <span className={`rounded-full border px-2.5 py-1 text-xs ${statusColor(selectedRecord.status || "en_attente")}`}>
+                                                        {(statusOptions.find((s) => s.value === selectedRecord.status)?.label) || "En attente"}
                                                     </span>
                                                 </div>
 
@@ -1188,11 +1191,7 @@ export default function CabinetDrHammachYassineV7() {
 
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Niveau d'urgence</div>
-                                                <div
-                                                    className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(
-                                                        selectedRecord.priority || "verte"
-                                                    )}`}
-                                                >
+                                                <div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-medium ${badgeColor(selectedRecord.priority || "verte")}`}>
                                                     {selectedRecord.priority || "verte"}
                                                 </div>
                                             </div>
@@ -1202,14 +1201,10 @@ export default function CabinetDrHammachYassineV7() {
                                             <div className="text-sm text-slate-500">Alertes immédiates</div>
                                             {selectedRecord.alerts?.length ? (
                                                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                    {selectedRecord.alerts.map((a, i) => (
-                                                        <li key={`${a}-${i}`}>{a}</li>
-                                                    ))}
+                                                    {selectedRecord.alerts.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}
                                                 </ul>
                                             ) : (
-                                                <div className="mt-2 text-sm text-slate-600">
-                                                    Aucune alerte majeure détectée.
-                                                </div>
+                                                <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
                                             )}
                                         </div>
 
@@ -1229,9 +1224,7 @@ export default function CabinetDrHammachYassineV7() {
                                             <div className="rounded-2xl border border-slate-200 p-4">
                                                 <div className="text-sm text-slate-500">Examens suggérés</div>
                                                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                    {(selectedRecord.exams || []).map((e, i) => (
-                                                        <li key={`${e}-${i}`}>{e}</li>
-                                                    ))}
+                                                    {(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}
                                                 </ul>
                                             </div>
 
@@ -1239,22 +1232,16 @@ export default function CabinetDrHammachYassineV7() {
                                                 <div className="text-sm text-slate-500">Conduite suggérée</div>
                                                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
                                                     {(selectedRecord.actions || []).length
-                                                        ? (selectedRecord.actions || []).map((a, i) => (
-                                                            <li key={`${a}-${i}`}>{a}</li>
-                                                        ))
+                                                        ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>)
                                                         : managementSuggestions.map((a, i) => <li key={`${a}-${i}`}>{a}</li>)}
                                                 </ul>
                                             </div>
                                         </div>
 
                                         <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-                                            <div className="text-sm text-slate-500">
-                                                Suggestions thérapeutiques / suite à donner
-                                            </div>
+                                            <div className="text-sm text-slate-500">Suggestions thérapeutiques / suite à donner</div>
                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {therapeuticSuggestions.map((item, i) => (
-                                                    <li key={`${item}-${i}`}>{item}</li>
-                                                ))}
+                                                {therapeuticSuggestions.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}
                                             </ul>
                                         </div>
 
@@ -1288,9 +1275,7 @@ export default function CabinetDrHammachYassineV7() {
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-slate-900">Assistant IA</h3>
-                                                    <p className="mt-1 text-sm text-slate-500">
-                                                        Visible uniquement côté médecin
-                                                    </p>
+                                                    <p className="mt-1 text-sm text-slate-500">Visible uniquement côté médecin</p>
                                                 </div>
 
                                                 <button
@@ -1312,29 +1297,21 @@ export default function CabinetDrHammachYassineV7() {
                                                 <div className="mt-5 space-y-4">
                                                     <div className="rounded-2xl border border-slate-200 p-4">
                                                         <div className="text-sm text-slate-500">Résumé clinique</div>
-                                                        <div className="mt-2 text-sm text-slate-800">
-                                                            {aiResult.resume_clinique}
-                                                        </div>
+                                                        <div className="mt-2 text-sm text-slate-800">{aiResult.resume_clinique}</div>
                                                     </div>
 
                                                     <div className="grid gap-4 md:grid-cols-2">
                                                         <div className="rounded-2xl border border-slate-200 p-4">
                                                             <div className="text-sm text-slate-500">Diagnostics probables</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.diagnostics_probables.map((item, i) => (
-                                                                    <li key={`dp-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.diagnostics_probables.map((item, i) => <li key={`dp-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
 
                                                         <div className="rounded-2xl border border-slate-200 p-4">
-                                                            <div className="text-sm text-slate-500">
-                                                                Diagnostics graves à éliminer
-                                                            </div>
+                                                            <div className="text-sm text-slate-500">Diagnostics graves à éliminer</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.diagnostics_graves_a_eliminer.map((item, i) => (
-                                                                    <li key={`dg-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.diagnostics_graves_a_eliminer.map((item, i) => <li key={`dg-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
                                                     </div>
@@ -1343,18 +1320,14 @@ export default function CabinetDrHammachYassineV7() {
                                                         <div className="rounded-2xl border border-slate-200 p-4">
                                                             <div className="text-sm text-slate-500">Red flags</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.red_flags.map((item, i) => (
-                                                                    <li key={`rf-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.red_flags.map((item, i) => <li key={`rf-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
 
                                                         <div className="rounded-2xl border border-slate-200 p-4">
                                                             <div className="text-sm text-slate-500">Bilans recommandés</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.bilans_recommandes.map((item, i) => (
-                                                                    <li key={`br-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.bilans_recommandes.map((item, i) => <li key={`br-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
                                                     </div>
@@ -1363,20 +1336,14 @@ export default function CabinetDrHammachYassineV7() {
                                                         <div className="rounded-2xl border border-slate-200 p-4">
                                                             <div className="text-sm text-slate-500">Conduite à tenir</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.conduite_a_tenir.map((item, i) => (
-                                                                    <li key={`ct-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.conduite_a_tenir.map((item, i) => <li key={`ct-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
 
                                                         <div className="rounded-2xl border border-slate-200 p-4">
-                                                            <div className="text-sm text-slate-500">
-                                                                Propositions thérapeutiques
-                                                            </div>
+                                                            <div className="text-sm text-slate-500">Propositions thérapeutiques</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.propositions_therapeutiques.map((item, i) => (
-                                                                    <li key={`pt-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.propositions_therapeutiques.map((item, i) => <li key={`pt-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
                                                     </div>
@@ -1385,22 +1352,86 @@ export default function CabinetDrHammachYassineV7() {
                                                         <div className="rounded-2xl border border-slate-200 p-4">
                                                             <div className="text-sm text-slate-500">Questions utiles</div>
                                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                                {aiResult.questions_utiles.map((item, i) => (
-                                                                    <li key={`qu-${i}`}>{item}</li>
-                                                                ))}
+                                                                {aiResult.questions_utiles.map((item, i) => <li key={`qu-${i}`}>{item}</li>)}
                                                             </ul>
                                                         </div>
 
                                                         <div className="rounded-2xl border border-slate-200 p-4">
                                                             <div className="text-sm text-slate-500">Niveau d'urgence</div>
-                                                            <div className="mt-2 text-sm font-medium text-slate-900">
-                                                                {aiResult.niveau_urgence}
-                                                            </div>
+                                                            <div className="mt-2 text-sm font-medium text-slate-900">{aiResult.niveau_urgence}</div>
                                                             <div className="mt-4 text-sm text-slate-500">Avertissement</div>
-                                                            <div className="mt-2 text-sm text-slate-700">
-                                                                {aiResult.avertissement}
-                                                            </div>
+                                                            <div className="mt-2 text-sm text-slate-700">{aiResult.avertissement}</div>
                                                         </div>
+                                                    </div>
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-slate-900">Documents médicaux</h3>
+                                                    <p className="mt-1 text-sm text-slate-500">Visible uniquement côté médecin</p>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" onClick={() => generateMedicalDocument("ordonnance")}>
+                                                        Ordonnance
+                                                    </button>
+                                                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" onClick={() => generateMedicalDocument("bilan")}>
+                                                        Bilan
+                                                    </button>
+                                                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" onClick={() => generateMedicalDocument("compte_rendu")}>
+                                                        Compte rendu
+                                                    </button>
+                                                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" onClick={() => generateMedicalDocument("certificat")}>
+                                                        Certificat
+                                                    </button>
+                                                    <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" onClick={() => generateMedicalDocument("arret_travail")}>
+                                                        Arrêt de travail
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {docLoading ? <div className="mt-4 text-sm text-slate-600">Génération...</div> : null}
+
+                                            {docError ? (
+                                                <div className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+                                                    {docError}
+                                                </div>
+                                            ) : null}
+
+                                            {generatedDoc ? (
+                                                <div className="mt-5 space-y-4">
+                                                    <div className="rounded-2xl border border-slate-200 p-4">
+                                                        <div className="text-sm text-slate-500">Document généré</div>
+                                                        <div className="mt-2 text-base font-medium text-slate-900">{generatedDoc.titre}</div>
+                                                        <div className="mt-1 text-xs text-slate-500">Type : {docType}</div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                                                            Texte modifiable
+                                                        </label>
+                                                        <textarea
+                                                            className="min-h-[320px] w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+                                                            value={generatedDocText}
+                                                            onChange={(e) => setGeneratedDocText(e.target.value)}
+                                                        />
+                                                    </div>
+
+                                                    <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4">
+                                                        <div className="text-sm font-medium text-amber-900">Avertissement</div>
+                                                        <div className="mt-1 text-sm text-amber-800">{generatedDoc.avertissement}</div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap gap-3">
+                                                        <button
+                                                            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
+                                                            onClick={() => navigator.clipboard.writeText(generatedDocText)}
+                                                        >
+                                                            Copier le texte
+                                                        </button>
                                                     </div>
                                                 </div>
                                             ) : null}
@@ -1416,11 +1447,7 @@ export default function CabinetDrHammachYassineV7() {
                             <section className={section}>
                                 <div className="mb-4 flex items-center justify-between">
                                     <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
-                                    <span
-                                        className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(
-                                            summary.priority
-                                        )}`}
-                                    >
+                                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>
                                         Priorité {summary.priority}
                                     </span>
                                 </div>
@@ -1428,95 +1455,43 @@ export default function CabinetDrHammachYassineV7() {
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <label className={label}>Nom complet</label>
-                                        <input
-                                            className={input}
-                                            value={form.fullName}
-                                            onChange={(e) => update("fullName", e.target.value)}
-                                        />
+                                        <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
                                     </div>
                                     <div>
                                         <label className={label}>Téléphone</label>
-                                        <input
-                                            className={input}
-                                            value={form.phone}
-                                            onChange={(e) => update("phone", e.target.value)}
-                                        />
+                                        <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} />
                                     </div>
                                     <div>
                                         <label className={label}>Âge</label>
-                                        <input
-                                            className={input}
-                                            value={form.age}
-                                            onChange={(e) => update("age", e.target.value)}
-                                        />
+                                        <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} />
                                     </div>
                                     <div>
                                         <label className={label}>Sexe</label>
-                                        <select
-                                            className={input}
-                                            value={form.sex}
-                                            onChange={(e) => update("sex", e.target.value)}
-                                        >
+                                        <select className={input} value={form.sex} onChange={(e) => update("sex", e.target.value)}>
                                             <option>Femme</option>
                                             <option>Homme</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label className={label}>Motif principal</label>
-                                        <select
-                                            className={input}
-                                            value={form.mainSymptom}
-                                            onChange={(e) => update("mainSymptom", e.target.value)}
-                                        >
-                                            {symptomCatalog.map((s) => (
-                                                <option key={s}>{s}</option>
-                                            ))}
+                                        <select className={input} value={form.mainSymptom} onChange={(e) => update("mainSymptom", e.target.value)}>
+                                            {symptomCatalog.map((s) => <option key={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className={label}>Intensité douleur /10</label>
-                                        <input
-                                            className={input}
-                                            value={form.painScale}
-                                            onChange={(e) => update("painScale", e.target.value)}
-                                        />
+                                        <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} />
                                     </div>
                                 </div>
 
                                 <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
                                 <div className="grid gap-4 md:grid-cols-3">
-                                    <div>
-                                        <label className={label}>TA</label>
-                                        <input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>FC</label>
-                                        <input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>SpO₂</label>
-                                        <input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Température</label>
-                                        <input
-                                            className={input}
-                                            value={form.temperature}
-                                            onChange={(e) => update("temperature", e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={label}>FR</label>
-                                        <input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label className={label}>Glycémie</label>
-                                        <input
-                                            className={input}
-                                            value={form.glycemia}
-                                            onChange={(e) => update("glycemia", e.target.value)}
-                                        />
-                                    </div>
+                                    <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
+                                    <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
+                                    <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
+                                    <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
+                                    <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
+                                    <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
                                 </div>
 
                                 <h3 className="mb-3 mt-6 text-lg font-medium">Questionnaire rapide</h3>
@@ -1541,29 +1516,17 @@ export default function CabinetDrHammachYassineV7() {
 
                                 <div className="mt-6">
                                     <label className={label}>Symptômes associés</label>
-                                    <MultiSelectChips
-                                        options={associatedSymptoms}
-                                        selected={form.associated}
-                                        setSelected={(v) => update("associated", v)}
-                                    />
+                                    <MultiSelectChips options={associatedSymptoms} selected={form.associated} setSelected={(v) => update("associated", v)} />
                                 </div>
 
                                 <div className="mt-6">
                                     <label className={label}>Facteurs de risque / antécédents</label>
-                                    <MultiSelectChips
-                                        options={riskFactorsList}
-                                        selected={form.risks}
-                                        setSelected={(v) => update("risks", v)}
-                                    />
+                                    <MultiSelectChips options={riskFactorsList} selected={form.risks} setSelected={(v) => update("risks", v)} />
                                 </div>
 
                                 <div className="mt-6">
                                     <label className={label}>Notes assistante</label>
-                                    <textarea
-                                        className={`${input} min-h-28`}
-                                        value={form.notes}
-                                        onChange={(e) => update("notes", e.target.value)}
-                                    />
+                                    <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
                                 </div>
 
                                 <div className="mt-6 flex flex-wrap gap-3">
@@ -1594,21 +1557,12 @@ export default function CabinetDrHammachYassineV7() {
                                     </button>
                                 </div>
 
-                                <SearchInput
-                                    value={searchRecords}
-                                    onChange={setSearchRecords}
-                                    placeholder="Rechercher nom, téléphone ou motif"
-                                />
+                                <SearchInput value={searchRecords} onChange={setSearchRecords} placeholder="Rechercher nom, téléphone ou motif" />
 
                                 <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
                                     {filteredRecords.length ? (
                                         filteredRecords.map((r) => (
-                                            <PatientCard
-                                                key={r.id}
-                                                p={r}
-                                                onOpen={(id) => setSelectedRecordId(id)}
-                                                canSeeClinical={isDoctor}
-                                            />
+                                            <PatientCard key={r.id} p={r} onOpen={(id) => setSelectedRecordId(id)} canSeeClinical={isDoctor} />
                                         ))
                                     ) : (
                                         <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
@@ -1629,56 +1583,30 @@ export default function CabinetDrHammachYassineV7() {
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className={label}>Nom du patient</label>
-                                    <input
-                                        className={input}
-                                        value={appointmentForm.patientName}
-                                        onChange={(e) => updateAppointment("patientName", e.target.value)}
-                                    />
+                                    <input className={input} value={appointmentForm.patientName} onChange={(e) => updateAppointment("patientName", e.target.value)} />
                                 </div>
                                 <div>
                                     <label className={label}>Téléphone</label>
-                                    <input
-                                        className={input}
-                                        value={appointmentForm.phone}
-                                        onChange={(e) => updateAppointment("phone", e.target.value)}
-                                    />
+                                    <input className={input} value={appointmentForm.phone} onChange={(e) => updateAppointment("phone", e.target.value)} />
                                 </div>
                                 <div>
                                     <label className={label}>Date</label>
-                                    <input
-                                        type="date"
-                                        className={input}
-                                        value={appointmentForm.date}
-                                        onChange={(e) => updateAppointment("date", e.target.value)}
-                                    />
+                                    <input type="date" className={input} value={appointmentForm.date} onChange={(e) => updateAppointment("date", e.target.value)} />
                                 </div>
                                 <div>
                                     <label className={label}>Heure</label>
-                                    <input
-                                        type="time"
-                                        className={input}
-                                        value={appointmentForm.time}
-                                        onChange={(e) => updateAppointment("time", e.target.value)}
-                                    />
+                                    <input type="time" className={input} value={appointmentForm.time} onChange={(e) => updateAppointment("time", e.target.value)} />
                                 </div>
                             </div>
 
                             <div className="mt-4">
                                 <label className={label}>Motif</label>
-                                <input
-                                    className={input}
-                                    value={appointmentForm.reason}
-                                    onChange={(e) => updateAppointment("reason", e.target.value)}
-                                />
+                                <input className={input} value={appointmentForm.reason} onChange={(e) => updateAppointment("reason", e.target.value)} />
                             </div>
 
                             <div className="mt-4">
                                 <label className={label}>Notes</label>
-                                <textarea
-                                    className={`${input} min-h-24`}
-                                    value={appointmentForm.notes}
-                                    onChange={(e) => updateAppointment("notes", e.target.value)}
-                                />
+                                <textarea className={`${input} min-h-24`} value={appointmentForm.notes} onChange={(e) => updateAppointment("notes", e.target.value)} />
                             </div>
 
                             <div className="mt-4">
@@ -1697,11 +1625,7 @@ export default function CabinetDrHammachYassineV7() {
                             </div>
 
                             <div className="mt-4">
-                                <SearchInput
-                                    value={searchAppointments}
-                                    onChange={setSearchAppointments}
-                                    placeholder="Rechercher nom, téléphone ou motif"
-                                />
+                                <SearchInput value={searchAppointments} onChange={setSearchAppointments} placeholder="Rechercher nom, téléphone ou motif" />
                             </div>
 
                             <div className="mt-4 max-h-[70vh] overflow-auto pr-1">
@@ -1733,76 +1657,22 @@ export default function CabinetDrHammachYassineV7() {
                                     <div className="mt-6 rounded-2xl border border-slate-200 p-4">
                                         <div className="mb-3 font-medium text-slate-900">Modifier le rendez-vous</div>
                                         <div className="grid gap-4 md:grid-cols-2">
-                                            <input
-                                                className={input}
-                                                value={appointmentEditForm.patient_name}
-                                                onChange={(e) =>
-                                                    setAppointmentEditForm((p) => ({ ...p, patient_name: e.target.value }))
-                                                }
-                                                placeholder="Nom du patient"
-                                            />
-                                            <input
-                                                className={input}
-                                                value={appointmentEditForm.phone}
-                                                onChange={(e) =>
-                                                    setAppointmentEditForm((p) => ({ ...p, phone: e.target.value }))
-                                                }
-                                                placeholder="Téléphone"
-                                            />
-                                            <input
-                                                type="date"
-                                                className={input}
-                                                value={appointmentEditForm.appointment_date}
-                                                onChange={(e) =>
-                                                    setAppointmentEditForm((p) => ({
-                                                        ...p,
-                                                        appointment_date: e.target.value,
-                                                    }))
-                                                }
-                                            />
-                                            <input
-                                                type="time"
-                                                className={input}
-                                                value={appointmentEditForm.appointment_time}
-                                                onChange={(e) =>
-                                                    setAppointmentEditForm((p) => ({
-                                                        ...p,
-                                                        appointment_time: e.target.value,
-                                                    }))
-                                                }
-                                            />
+                                            <input className={input} value={appointmentEditForm.patient_name} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, patient_name: e.target.value }))} placeholder="Nom du patient" />
+                                            <input className={input} value={appointmentEditForm.phone} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Téléphone" />
+                                            <input type="date" className={input} value={appointmentEditForm.appointment_date} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, appointment_date: e.target.value }))} />
+                                            <input type="time" className={input} value={appointmentEditForm.appointment_time} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, appointment_time: e.target.value }))} />
                                         </div>
 
                                         <div className="mt-4 grid gap-4">
-                                            <input
-                                                className={input}
-                                                value={appointmentEditForm.reason}
-                                                onChange={(e) =>
-                                                    setAppointmentEditForm((p) => ({ ...p, reason: e.target.value }))
-                                                }
-                                                placeholder="Motif"
-                                            />
-                                            <textarea
-                                                className={`${input} min-h-24`}
-                                                value={appointmentEditForm.notes}
-                                                onChange={(e) =>
-                                                    setAppointmentEditForm((p) => ({ ...p, notes: e.target.value }))
-                                                }
-                                                placeholder="Notes"
-                                            />
+                                            <input className={input} value={appointmentEditForm.reason} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Motif" />
+                                            <textarea className={`${input} min-h-24`} value={appointmentEditForm.notes} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" />
                                         </div>
 
                                         <div className="mt-4 flex gap-3">
-                                            <button
-                                                className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
-                                                onClick={saveEditedAppointment}
-                                            >
+                                            <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white" onClick={saveEditedAppointment}>
                                                 Enregistrer
                                             </button>
-                                            <button
-                                                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm"
-                                                onClick={() => setEditingAppointmentId(null)}
-                                            >
+                                            <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setEditingAppointmentId(null)}>
                                                 Annuler
                                             </button>
                                         </div>
@@ -1823,11 +1693,7 @@ export default function CabinetDrHammachYassineV7() {
                         </div>
 
                         <div className="mt-4">
-                            <SearchInput
-                                value={searchPatients}
-                                onChange={setSearchPatients}
-                                placeholder="Rechercher nom ou téléphone"
-                            />
+                            <SearchInput value={searchPatients} onChange={setSearchPatients} placeholder="Rechercher nom ou téléphone" />
                         </div>
 
                         <div className="mt-4 overflow-auto">
@@ -1849,14 +1715,9 @@ export default function CabinetDrHammachYassineV7() {
                                             <td className="py-2 pr-4">{p.age || "-"}</td>
                                             <td className="py-2 pr-4">{p.sex || "-"}</td>
                                             <td className="py-2 pr-4">{p.phone || "-"}</td>
+                                            <td className="py-2 pr-4">{p.created_at ? new Date(p.created_at).toLocaleString("fr-FR") : "-"}</td>
                                             <td className="py-2 pr-4">
-                                                {p.created_at ? new Date(p.created_at).toLocaleString("fr-FR") : "-"}
-                                            </td>
-                                            <td className="py-2 pr-4">
-                                                <button
-                                                    className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs"
-                                                    onClick={() => startEditPatient(p)}
-                                                >
+                                                <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs" onClick={() => startEditPatient(p)}>
                                                     Modifier
                                                 </button>
                                             </td>
@@ -1871,37 +1732,10 @@ export default function CabinetDrHammachYassineV7() {
                                 <div className="mb-3 font-medium text-slate-900">Modifier la fiche patient</div>
 
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    <input
-                                        className={input}
-                                        value={patientEditForm.full_name}
-                                        onChange={(e) =>
-                                            setPatientEditForm((p) => ({ ...p, full_name: e.target.value }))
-                                        }
-                                        placeholder="Nom complet"
-                                    />
-                                    <input
-                                        className={input}
-                                        value={patientEditForm.phone}
-                                        onChange={(e) =>
-                                            setPatientEditForm((p) => ({ ...p, phone: e.target.value }))
-                                        }
-                                        placeholder="Téléphone"
-                                    />
-                                    <input
-                                        className={input}
-                                        value={patientEditForm.age}
-                                        onChange={(e) =>
-                                            setPatientEditForm((p) => ({ ...p, age: e.target.value }))
-                                        }
-                                        placeholder="Âge"
-                                    />
-                                    <select
-                                        className={input}
-                                        value={patientEditForm.sex}
-                                        onChange={(e) =>
-                                            setPatientEditForm((p) => ({ ...p, sex: e.target.value }))
-                                        }
-                                    >
+                                    <input className={input} value={patientEditForm.full_name} onChange={(e) => setPatientEditForm((p) => ({ ...p, full_name: e.target.value }))} placeholder="Nom complet" />
+                                    <input className={input} value={patientEditForm.phone} onChange={(e) => setPatientEditForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Téléphone" />
+                                    <input className={input} value={patientEditForm.age} onChange={(e) => setPatientEditForm((p) => ({ ...p, age: e.target.value }))} placeholder="Âge" />
+                                    <select className={input} value={patientEditForm.sex} onChange={(e) => setPatientEditForm((p) => ({ ...p, sex: e.target.value }))}>
                                         <option value="">Sexe</option>
                                         <option>Femme</option>
                                         <option>Homme</option>
@@ -1909,35 +1743,15 @@ export default function CabinetDrHammachYassineV7() {
                                 </div>
 
                                 <div className="mt-4 grid gap-4">
-                                    <textarea
-                                        className={`${input} min-h-24`}
-                                        value={patientEditForm.clinical_notes}
-                                        onChange={(e) =>
-                                            setPatientEditForm((p) => ({ ...p, clinical_notes: e.target.value }))
-                                        }
-                                        placeholder="Notes cliniques / évolution"
-                                    />
-                                    <textarea
-                                        className={`${input} min-h-24`}
-                                        value={patientEditForm.labs}
-                                        onChange={(e) =>
-                                            setPatientEditForm((p) => ({ ...p, labs: e.target.value }))
-                                        }
-                                        placeholder="Bilans / résultats / examens"
-                                    />
+                                    <textarea className={`${input} min-h-24`} value={patientEditForm.clinical_notes} onChange={(e) => setPatientEditForm((p) => ({ ...p, clinical_notes: e.target.value }))} placeholder="Notes cliniques / évolution" />
+                                    <textarea className={`${input} min-h-24`} value={patientEditForm.labs} onChange={(e) => setPatientEditForm((p) => ({ ...p, labs: e.target.value }))} placeholder="Bilans / résultats / examens" />
                                 </div>
 
                                 <div className="mt-4 flex gap-3">
-                                    <button
-                                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
-                                        onClick={saveEditedPatient}
-                                    >
+                                    <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white" onClick={saveEditedPatient}>
                                         Enregistrer
                                     </button>
-                                    <button
-                                        className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm"
-                                        onClick={() => setEditingPatientId(null)}
-                                    >
+                                    <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setEditingPatientId(null)}>
                                         Annuler
                                     </button>
                                 </div>
@@ -1956,11 +1770,7 @@ export default function CabinetDrHammachYassineV7() {
                         </div>
 
                         <div className="mt-4">
-                            <SearchInput
-                                value={searchWaitingRoom}
-                                onChange={setSearchWaitingRoom}
-                                placeholder="Rechercher nom, téléphone ou motif"
-                            />
+                            <SearchInput value={searchWaitingRoom} onChange={setSearchWaitingRoom} placeholder="Rechercher nom, téléphone ou motif" />
                         </div>
 
                         <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto pr-1">
@@ -1972,9 +1782,7 @@ export default function CabinetDrHammachYassineV7() {
                                                 <div className="font-medium text-slate-900">{w.patient_name}</div>
                                                 <div className="mt-1 text-sm text-slate-600">{w.phone || "-"}</div>
                                                 <div className="mt-1 text-sm text-slate-600">{w.reason || "-"}</div>
-                                                <div className="mt-1 text-xs text-slate-500">
-                                                    {w.created_at ? new Date(w.created_at).toLocaleString("fr-FR") : "-"}
-                                                </div>
+                                                <div className="mt-1 text-xs text-slate-500">{w.created_at ? new Date(w.created_at).toLocaleString("fr-FR") : "-"}</div>
                                             </div>
 
                                             <span className="rounded-full border px-2.5 py-1 text-xs bg-emerald-100 text-emerald-800 border-emerald-200">
@@ -2029,10 +1837,7 @@ export default function CabinetDrHammachYassineV7() {
                                     {todaysPatients.map((p) => (
                                         <tr key={p.id} className="border-b border-slate-100">
                                             <td className="py-2 pr-4">
-                                                {new Date(p.created_at).toLocaleTimeString("fr-FR", {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                })}
+                                                {new Date(p.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                                             </td>
                                             <td className="py-2 pr-4">{p.patient_name}</td>
                                             <td className="py-2 pr-4">{p.main_symptom}</td>
