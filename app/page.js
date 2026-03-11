@@ -1,6 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const symptomCatalog = [
     "Douleur thoracique",
@@ -60,7 +65,6 @@ const demoUsers = {
 };
 
 const emptyForm = {
-    patientId: "",
     fullName: "",
     age: "",
     sex: "Femme",
@@ -78,7 +82,6 @@ const emptyForm = {
     associated: [],
     risks: [],
     notes: "",
-    createdAt: "",
 };
 
 function badgeColor(level) {
@@ -105,7 +108,10 @@ function computeClinicalSummary(form) {
     const fc = Number(form.fc || 0);
     const age = Number(form.age || 0);
     const pas = parseSystolic(form.ta);
-    const has = (v) => form.associated.includes(v) || form.risks.includes(v) || form.mainSymptom === v;
+    const has = (v) =>
+        (form.associated || []).includes(v) ||
+        (form.risks || []).includes(v) ||
+        form.mainSymptom === v;
 
     if (spo2 > 0 && spo2 < 94) {
         alerts.push("SpO₂ < 94 % : évaluer urgence respiratoire ou cardiovasculaire");
@@ -129,9 +135,9 @@ function computeClinicalSummary(form) {
             if (
                 has("Douleur irradiant bras gauche") ||
                 has("Douleur à l'effort") ||
-                form.risks.includes("HTA") ||
-                form.risks.includes("Tabac") ||
-                form.risks.includes("Antécédent cardiaque")
+                (form.risks || []).includes("HTA") ||
+                (form.risks || []).includes("Tabac") ||
+                (form.risks || []).includes("Antécédent cardiaque")
             ) {
                 diagnoses.push({ label: "Syndrome coronarien aigu", score: 95 });
                 diagnoses.push({ label: "Angor instable", score: 82 });
@@ -159,7 +165,7 @@ function computeClinicalSummary(form) {
             break;
         }
         case "Dyspnée": {
-            if (has("Crépitants") || form.risks.includes("Insuffisance cardiaque")) {
+            if (has("Crépitants") || (form.risks || []).includes("Insuffisance cardiaque")) {
                 diagnoses.push({ label: "Œdème aigu pulmonaire", score: 90 });
                 diagnoses.push({ label: "SCA avec décompensation", score: 62 });
                 diagnoses.push({ label: "Pneumonie", score: 35 });
@@ -263,7 +269,10 @@ function computeClinicalSummary(form) {
         case "Douleur mollet": {
             diagnoses.push({
                 label: "Thrombose veineuse profonde",
-                score: form.risks.includes("Voyage prolongé récent") || has("Douleur mollet unilatérale") ? 90 : 60,
+                score:
+                    (form.risks || []).includes("Voyage prolongé récent") || has("Douleur mollet unilatérale")
+                        ? 90
+                        : 60,
             });
             diagnoses.push({ label: "Contracture musculaire", score: 40 });
             diagnoses.push({ label: "Kyste poplité", score: 20 });
@@ -288,7 +297,11 @@ function computeClinicalSummary(form) {
             break;
         }
         case "Douleur pelvienne": {
-            if (form.risks.includes("Grossesse possible") || has("Grossesse possible") || has("Saignement vaginal")) {
+            if (
+                (form.risks || []).includes("Grossesse possible") ||
+                has("Grossesse possible") ||
+                has("Saignement vaginal")
+            ) {
                 diagnoses.push({ label: "Grossesse extra-utérine", score: 92 });
                 diagnoses.push({ label: "Fausse couche", score: 50 });
                 diagnoses.push({ label: "Kyste ovarien", score: 45 });
@@ -331,7 +344,11 @@ function computeClinicalSummary(form) {
 
 function MultiSelectChips({ options, selected, setSelected }) {
     const toggle = (option) => {
-        setSelected(selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option]);
+        setSelected(
+            selected.includes(option)
+                ? selected.filter((x) => x !== option)
+                : [...selected, option]
+        );
     };
 
     return (
@@ -343,7 +360,9 @@ function MultiSelectChips({ options, selected, setSelected }) {
                         type="button"
                         key={option}
                         onClick={() => toggle(option)}
-                        className={`rounded-full border px-3 py-1.5 text-xs ${active ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300"
+                        className={`rounded-full border px-3 py-1.5 text-xs ${active
+                                ? "bg-slate-900 text-white border-slate-900"
+                                : "bg-white text-slate-700 border-slate-300"
                             }`}
                     >
                         {option}
@@ -373,21 +392,36 @@ function LoginScreen({ onLogin }) {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
             <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h1 className="text-2xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                <p className="mt-2 text-sm text-slate-600">Connexion V1 — démonstration locale</p>
+                <p className="mt-2 text-sm text-slate-600">Connexion V2 — synchronisation Supabase</p>
                 <div className="mt-6 space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Rôle</label>
-                        <select className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
+                        <select
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                        >
                             <option value="assistante">Assistante</option>
                             <option value="medecin">Médecin</option>
                         </select>
                     </div>
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Code PIN</label>
-                        <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="1234 ou 2026" />
+                        <input
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            type="password"
+                            value={pin}
+                            onChange={(e) => setPin(e.target.value)}
+                            placeholder="1234 ou 2026"
+                        />
                     </div>
                     {error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
-                    <button className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white" onClick={submit}>Se connecter</button>
+                    <button
+                        className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white"
+                        onClick={submit}
+                    >
+                        Se connecter
+                    </button>
                     <div className="text-xs text-slate-500">Démo : Assistante = 1234 · Médecin = 2026</div>
                 </div>
             </div>
@@ -396,71 +430,174 @@ function LoginScreen({ onLogin }) {
 }
 
 function PatientCard({ p, onOpen }) {
-    const priorityStyles = badgeColor(p.summary.priority);
+    const priorityStyles = badgeColor(p.priority);
     return (
-        <button onClick={() => onOpen(p.id)} className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300">
+        <button
+            onClick={() => onOpen(p.id)}
+            className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-slate-300"
+        >
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <div className="font-medium text-slate-900">{p.form.fullName || "Patient sans nom"}</div>
-                    <div className="mt-1 text-sm text-slate-600">{p.form.age || "?"} ans · {p.form.sex} · {p.form.mainSymptom}</div>
-                    <div className="mt-1 text-xs text-slate-500">{p.form.createdAt}</div>
+                    <div className="font-medium text-slate-900">{p.patient_name || "Patient sans nom"}</div>
+                    <div className="mt-1 text-sm text-slate-600">
+                        {p.patient_age || "?"} ans · {p.patient_sex} · {p.main_symptom}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                        {new Date(p.created_at).toLocaleString("fr-FR")}
+                    </div>
                 </div>
-                <span className={`rounded-full border px-2.5 py-1 text-xs ${priorityStyles}`}>{p.summary.priority}</span>
+                <span className={`rounded-full border px-2.5 py-1 text-xs ${priorityStyles}`}>
+                    {p.priority}
+                </span>
             </div>
-            <div className="mt-3 text-sm text-slate-700">{p.summary.diagnoses[0]?.label || "Aucun diagnostic"}</div>
+            <div className="mt-3 text-sm text-slate-700">{p.diagnoses?.[0]?.label || "Aucun diagnostic"}</div>
         </button>
     );
 }
 
-export default function CabinetDrHammachYassineV1() {
+export default function CabinetDrHammachYassineV2() {
     const [user, setUser] = useState(null);
     const [view, setView] = useState("assistante");
     const [form, setForm] = useState(emptyForm);
     const [records, setRecords] = useState([]);
     const [selectedRecordId, setSelectedRecordId] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        const saved = localStorage.getItem("cabinet-dr-hammach-yassine-v1-records");
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            setRecords(parsed);
-            if (parsed[0]) setSelectedRecordId(parsed[0].id);
+    const summary = useMemo(() => computeClinicalSummary(form), [form]);
+
+    const loadRecords = async () => {
+        const { data, error } = await supabase
+            .from("triage_forms")
+            .select(`
+        id,
+        main_symptom,
+        priority,
+        alerts,
+        diagnoses,
+        exams,
+        actions,
+        notes,
+        ta,
+        fc,
+        spo2,
+        temperature,
+        created_at,
+        patients (
+          full_name,
+          age,
+          sex,
+          phone
+        )
+      `)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error(error);
+            return;
         }
-    }, []);
+
+        const normalized = (data || []).map((row) => ({
+            id: row.id,
+            main_symptom: row.main_symptom,
+            priority: row.priority,
+            alerts: row.alerts || [],
+            diagnoses: row.diagnoses || [],
+            exams: row.exams || [],
+            actions: row.actions || [],
+            notes: row.notes || "",
+            ta: row.ta || "",
+            fc: row.fc || "",
+            spo2: row.spo2 || "",
+            temperature: row.temperature || "",
+            created_at: row.created_at,
+            patient_name: row.patients?.full_name || "",
+            patient_age: row.patients?.age || "",
+            patient_sex: row.patients?.sex || "",
+            patient_phone: row.patients?.phone || "",
+        }));
+
+        setRecords(normalized);
+        if (!selectedRecordId && normalized[0]) setSelectedRecordId(normalized[0].id);
+    };
 
     useEffect(() => {
-        localStorage.setItem("cabinet-dr-hammach-yassine-v1-records", JSON.stringify(records));
-    }, [records]);
+        loadRecords();
+        const interval = setInterval(loadRecords, 3000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (user) setView(user.role);
     }, [user]);
 
-    const summary = useMemo(() => computeClinicalSummary(form), [form]);
-    const selectedRecord = useMemo(() => records.find((r) => r.id === selectedRecordId) || null, [records, selectedRecordId]);
+    const selectedRecord = useMemo(
+        () => records.find((r) => r.id === selectedRecordId) || null,
+        [records, selectedRecordId]
+    );
 
     const section = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
     const label = "mb-1 block text-sm font-medium text-slate-700";
     const input = "w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
     const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-    const saveRecord = () => {
-        const now = new Date().toLocaleString("fr-FR");
-        const newRecord = {
-            id: crypto.randomUUID(),
-            form: { ...form, createdAt: now },
-            summary: computeClinicalSummary({ ...form, createdAt: now }),
-        };
-        setRecords((prev) => [newRecord, ...prev]);
-        setSelectedRecordId(newRecord.id);
-        setForm({ ...emptyForm, createdAt: "" });
-        setView("medecin");
-    };
+    const saveRecord = async () => {
+        try {
+            setLoading(true);
 
-    const clearAll = () => {
-        setRecords([]);
-        setSelectedRecordId(null);
-        localStorage.removeItem("cabinet-dr-hammach-yassine-v1-records");
+            const { data: patient, error: patientError } = await supabase
+                .from("patients")
+                .insert({
+                    full_name: form.fullName,
+                    age: form.age ? Number(form.age) : null,
+                    sex: form.sex,
+                    phone: form.phone,
+                })
+                .select()
+                .single();
+
+            if (patientError) throw patientError;
+
+            const clinical = computeClinicalSummary(form);
+
+            const { data: triage, error: triageError } = await supabase
+                .from("triage_forms")
+                .insert({
+                    patient_id: patient.id,
+                    created_by: user?.name || "Assistante",
+                    main_symptom: form.mainSymptom,
+                    onset: form.onset,
+                    duration: form.duration,
+                    pain_scale: form.painScale ? Number(form.painScale) : null,
+                    ta: form.ta,
+                    fc: form.fc ? Number(form.fc) : null,
+                    spo2: form.spo2 ? Number(form.spo2) : null,
+                    temperature: form.temperature ? Number(form.temperature) : null,
+                    fr: form.fr ? Number(form.fr) : null,
+                    glycemia: form.glycemia,
+                    associated: form.associated,
+                    risks: form.risks,
+                    notes: form.notes,
+                    priority: clinical.priority,
+                    alerts: clinical.alerts,
+                    diagnoses: clinical.diagnoses,
+                    exams: clinical.exams,
+                    actions: clinical.actions,
+                })
+                .select()
+                .single();
+
+            if (triageError) throw triageError;
+
+            setForm(emptyForm);
+            setView("medecin");
+            await loadRecords();
+            setSelectedRecordId(triage.id);
+        } catch (e) {
+            console.error(e);
+            alert("Erreur lors de l'enregistrement dans Supabase");
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (!user) return <LoginScreen onLogin={setUser} />;
@@ -471,12 +608,27 @@ export default function CabinetDrHammachYassineV1() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                        <p className="mt-1 text-slate-600">V1 — Assistante → synthèse médecin automatique</p>
+                        <p className="mt-1 text-slate-600">V2 — synchronisation cloud assistante → médecin</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <button className={`rounded-full px-4 py-2 text-sm ${view === "assistante" ? "bg-slate-900 text-white" : "bg-white border border-slate-300"}`} onClick={() => setView("assistante")}>Vue assistante</button>
-                        <button className={`rounded-full px-4 py-2 text-sm ${view === "medecin" ? "bg-slate-900 text-white" : "bg-white border border-slate-300"}`} onClick={() => setView("medecin")}>Vue médecin</button>
-                        <button className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setUser(null)}>Déconnexion</button>
+                        <button
+                            className={`rounded-full px-4 py-2 text-sm ${view === "assistante" ? "bg-slate-900 text-white" : "bg-white border border-slate-300"}`}
+                            onClick={() => setView("assistante")}
+                        >
+                            Vue assistante
+                        </button>
+                        <button
+                            className={`rounded-full px-4 py-2 text-sm ${view === "medecin" ? "bg-slate-900 text-white" : "bg-white border border-slate-300"}`}
+                            onClick={() => setView("medecin")}
+                        >
+                            Vue médecin
+                        </button>
+                        <button
+                            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm"
+                            onClick={() => setUser(null)}
+                        >
+                            Déconnexion
+                        </button>
                     </div>
                 </div>
 
@@ -485,21 +637,23 @@ export default function CabinetDrHammachYassineV1() {
                         <section className={section}>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-xl font-semibold">Nouvelle fiche patient</h2>
-                                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>Priorité {summary.priority}</span>
+                                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(summary.priority)}`}>
+                                    Priorité {summary.priority}
+                                </span>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className={label}>Nom complet</label>
-                                    <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} placeholder="Nom du patient" />
+                                    <input className={input} value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
                                 </div>
                                 <div>
                                     <label className={label}>Téléphone</label>
-                                    <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Téléphone" />
+                                    <input className={input} value={form.phone} onChange={(e) => update("phone", e.target.value)} />
                                 </div>
                                 <div>
                                     <label className={label}>Âge</label>
-                                    <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} placeholder="Âge" />
+                                    <input className={input} value={form.age} onChange={(e) => update("age", e.target.value)} />
                                 </div>
                                 <div>
                                     <label className={label}>Sexe</label>
@@ -516,21 +670,21 @@ export default function CabinetDrHammachYassineV1() {
                                 </div>
                                 <div>
                                     <label className={label}>Intensité douleur /10</label>
-                                    <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} placeholder="7" />
+                                    <input className={input} value={form.painScale} onChange={(e) => update("painScale", e.target.value)} />
                                 </div>
                             </div>
 
                             <h3 className="mb-3 mt-6 text-lg font-medium">Constantes</h3>
                             <div className="grid gap-4 md:grid-cols-3">
-                                <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} placeholder="120/80" /></div>
-                                <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} placeholder="82" /></div>
-                                <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} placeholder="98" /></div>
-                                <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} placeholder="37.2" /></div>
-                                <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} placeholder="16" /></div>
-                                <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} placeholder="Si besoin" /></div>
+                                <div><label className={label}>TA</label><input className={input} value={form.ta} onChange={(e) => update("ta", e.target.value)} /></div>
+                                <div><label className={label}>FC</label><input className={input} value={form.fc} onChange={(e) => update("fc", e.target.value)} /></div>
+                                <div><label className={label}>SpO₂</label><input className={input} value={form.spo2} onChange={(e) => update("spo2", e.target.value)} /></div>
+                                <div><label className={label}>Température</label><input className={input} value={form.temperature} onChange={(e) => update("temperature", e.target.value)} /></div>
+                                <div><label className={label}>FR</label><input className={input} value={form.fr} onChange={(e) => update("fr", e.target.value)} /></div>
+                                <div><label className={label}>Glycémie</label><input className={input} value={form.glycemia} onChange={(e) => update("glycemia", e.target.value)} /></div>
                             </div>
 
-                            <h3 className="mb-3 mt-6 text-lg font-medium">Questionnaire rapide</h3>
+                            <h3 className={"mb-3 mt-6 text-lg font-medium"}>Questionnaire rapide</h3>
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className={label}>Début</label>
@@ -562,19 +716,34 @@ export default function CabinetDrHammachYassineV1() {
 
                             <div className="mt-6">
                                 <label className={label}>Notes assistante</label>
-                                <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Informations complémentaires" />
+                                <textarea className={`${input} min-h-28`} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
                             </div>
 
                             <div className="mt-6 flex flex-wrap gap-3">
-                                <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white" onClick={saveRecord}>Créer et envoyer au médecin</button>
-                                <button className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm" onClick={() => setForm(emptyForm)}>Réinitialiser</button>
+                                <button
+                                    className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white disabled:opacity-50"
+                                    onClick={saveRecord}
+                                    disabled={loading}
+                                >
+                                    {loading ? "Enregistrement..." : "Créer et envoyer au médecin"}
+                                </button>
+                                <button
+                                    className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm"
+                                    onClick={() => setForm(emptyForm)}
+                                >
+                                    Réinitialiser
+                                </button>
                             </div>
                         </section>
                     ) : (
                         <section className={section}>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-xl font-semibold">Synthèse médecin</h2>
-                                {selectedRecord ? <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(selectedRecord.summary.priority)}`}>Priorité {selectedRecord.summary.priority}</span> : null}
+                                {selectedRecord ? (
+                                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${badgeColor(selectedRecord.priority)}`}>
+                                        Priorité {selectedRecord.priority}
+                                    </span>
+                                ) : null}
                             </div>
 
                             {selectedRecord ? (
@@ -582,23 +751,27 @@ export default function CabinetDrHammachYassineV1() {
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Patient</div>
-                                            <div className="mt-1 font-medium text-slate-900">{selectedRecord.form.fullName || "Patient sans nom"}</div>
-                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.form.age || "?"} ans · {selectedRecord.form.sex}</div>
-                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.form.phone || "Téléphone non renseigné"}</div>
+                                            <div className="mt-1 font-medium text-slate-900">{selectedRecord.patient_name || "Patient sans nom"}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_age || "?"} ans · {selectedRecord.patient_sex}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{selectedRecord.patient_phone || "Téléphone non renseigné"}</div>
                                         </div>
                                         <div className="rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Motif et constantes</div>
-                                            <div className="mt-1 font-medium text-slate-900">{selectedRecord.form.mainSymptom}</div>
-                                            <div className="mt-1 text-sm text-slate-600">TA {selectedRecord.form.ta || "-"} · FC {selectedRecord.form.fc || "-"} · SpO₂ {selectedRecord.form.spo2 || "-"}% · T {selectedRecord.form.temperature || "-"}°C</div>
-                                            <div className="mt-1 text-xs text-slate-500">{selectedRecord.form.createdAt}</div>
+                                            <div className="mt-1 font-medium text-slate-900">{selectedRecord.main_symptom}</div>
+                                            <div className="mt-1 text-sm text-slate-600">
+                                                TA {selectedRecord.ta || "-"} · FC {selectedRecord.fc || "-"} · SpO₂ {selectedRecord.spo2 || "-"}% · T {selectedRecord.temperature || "-"}°C
+                                            </div>
+                                            <div className="mt-1 text-xs text-slate-500">
+                                                {new Date(selectedRecord.created_at).toLocaleString("fr-FR")}
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div className="mt-5 rounded-2xl border border-slate-200 p-4">
                                         <div className="text-sm text-slate-500">Alertes immédiates</div>
-                                        {selectedRecord.summary.alerts.length ? (
+                                        {selectedRecord.alerts?.length ? (
                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {selectedRecord.summary.alerts.map((a) => <li key={a}>{a}</li>)}
+                                                {selectedRecord.alerts.map((a) => <li key={a}>{a}</li>)}
                                             </ul>
                                         ) : (
                                             <div className="mt-2 text-sm text-slate-600">Aucune alerte majeure détectée.</div>
@@ -608,8 +781,11 @@ export default function CabinetDrHammachYassineV1() {
                                     <div className="mt-5 rounded-2xl border border-slate-200 p-4">
                                         <div className="text-sm text-slate-500">Top 3 diagnostics probables</div>
                                         <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
-                                            {selectedRecord.summary.diagnoses.map((d) => (
-                                                <li key={d.label}><span className="font-medium">{d.label}</span> <span className="text-slate-500">— score {d.score}</span></li>
+                                            {(selectedRecord.diagnoses || []).map((d, i) => (
+                                                <li key={`${d.label}-${i}`}>
+                                                    <span className="font-medium">{d.label}</span>
+                                                    <span className="text-slate-500"> — score {d.score}</span>
+                                                </li>
                                             ))}
                                         </ol>
                                     </div>
@@ -618,24 +794,30 @@ export default function CabinetDrHammachYassineV1() {
                                         <div className="rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Examens suggérés</div>
                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {selectedRecord.summary.exams.map((e) => <li key={e}>{e}</li>)}
+                                                {(selectedRecord.exams || []).map((e, i) => <li key={`${e}-${i}`}>{e}</li>)}
                                             </ul>
                                         </div>
                                         <div className="rounded-2xl border border-slate-200 p-4">
                                             <div className="text-sm text-slate-500">Conduite suggérée</div>
                                             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                                {selectedRecord.summary.actions.length ? selectedRecord.summary.actions.map((a) => <li key={a}>{a}</li>) : <li>À compléter par l'examen clinique</li>}
+                                                {(selectedRecord.actions || []).length
+                                                    ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>)
+                                                    : <li>À compléter par l'examen clinique</li>}
                                             </ul>
                                         </div>
                                     </div>
 
                                     <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4">
                                         <div className="text-sm text-slate-500">Notes assistante</div>
-                                        <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedRecord.form.notes || "Aucune note"}</div>
+                                        <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                                            {selectedRecord.notes || "Aucune note"}
+                                        </div>
                                     </div>
                                 </>
                             ) : (
-                                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">Aucune fiche reçue pour le moment.</div>
+                                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+                                    Aucune fiche reçue pour le moment.
+                                </div>
                             )}
                         </section>
                     )}
@@ -644,20 +826,35 @@ export default function CabinetDrHammachYassineV1() {
                         <section className={section}>
                             <div className="mb-4 flex items-center justify-between">
                                 <h2 className="text-lg font-semibold">Files patient</h2>
-                                <button className="text-xs text-slate-500 underline" onClick={clearAll}>Tout effacer</button>
+                                <button className="text-xs text-slate-500" onClick={loadRecords}>Actualiser</button>
                             </div>
                             <div className="space-y-3 max-h-[70vh] overflow-auto pr-1">
-                                {records.length ? records.map((r) => <PatientCard key={r.id} p={r} onOpen={(id) => { setSelectedRecordId(id); setView("medecin"); }} />) : <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Aucun patient enregistré.</div>}
+                                {records.length ? (
+                                    records.map((r) => (
+                                        <PatientCard
+                                            key={r.id}
+                                            p={r}
+                                            onOpen={(id) => {
+                                                setSelectedRecordId(id);
+                                                setView("medecin");
+                                            }}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                                        Aucun patient enregistré.
+                                    </div>
+                                )}
                             </div>
                         </section>
 
                         <section className={section}>
-                            <h2 className="text-lg font-semibold">Notes V1</h2>
+                            <h2 className="text-lg font-semibold">Notes V2</h2>
                             <div className="mt-3 space-y-2 text-sm text-slate-700">
-                                <div>• Sauvegarde locale sur l'appareil uniquement</div>
-                                <div>• Démo locale, pas encore multi-appareils</div>
-                                <div>• Connexion par PIN simple pour test</div>
-                                <div>• Algorithmes de triage intégrés sur symptômes fréquents</div>
+                                <div>• Données synchronisées via Supabase</div>
+                                <div>• Visible sur les deux tablettes</div>
+                                <div>• Rechargement automatique toutes les 3 secondes</div>
+                                <div>• Base prête pour authentification réelle plus tard</div>
                             </div>
                         </section>
                     </aside>
@@ -665,4 +862,4 @@ export default function CabinetDrHammachYassineV1() {
             </div>
         </div>
     );
-} 
+}
