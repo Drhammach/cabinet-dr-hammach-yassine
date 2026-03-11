@@ -606,6 +606,10 @@ export default function CabinetDrHammachYassineV61() {
     const [searchWaitingRoom, setSearchWaitingRoom] = useState("");
     const [doctorNotesDraft, setDoctorNotesDraft] = useState("");
     const [savingDoctorNotes, setSavingDoctorNotes] = useState(false);
+    const [editingPatientId, setEditingPatientId] = useState(null);
+    const [patientEditForm, setPatientEditForm] = useState({ full_name: "", age: "", sex: "", phone: "", clinical_notes: "", labs: "" });
+    const [editingAppointmentId, setEditingAppointmentId] = useState(null);
+    const [appointmentEditForm, setAppointmentEditForm] = useState({ patient_name: "", phone: "", appointment_date: "", appointment_time: "", reason: "", notes: "" });
 
     const section = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
     const label = "mb-1 block text-sm font-medium text-slate-700";
@@ -845,6 +849,51 @@ export default function CabinetDrHammachYassineV61() {
         await loadAppointments();
     };
 
+    const startEditAppointment = (appt) => {
+        setEditingAppointmentId(appt.id);
+        setAppointmentEditForm({
+            patient_name: appt.patient_name || "",
+            phone: appt.phone || "",
+            appointment_date: appt.appointment_date || "",
+            appointment_time: appt.appointment_time || "",
+            reason: appt.reason || "",
+            notes: appt.notes || "",
+        });
+    };
+
+    const saveEditedAppointment = async () => {
+        if (!editingAppointmentId) return;
+        await supabase.from("appointments").update(appointmentEditForm).eq("id", editingAppointmentId);
+        setEditingAppointmentId(null);
+        await loadAppointments();
+    };
+
+    const startEditPatient = (p) => {
+        setEditingPatientId(p.id);
+        setPatientEditForm({
+            full_name: p.full_name || "",
+            age: p.age || "",
+            sex: p.sex || "",
+            phone: p.phone || "",
+            clinical_notes: p.clinical_notes || "",
+            labs: p.labs || "",
+        });
+    };
+
+    const saveEditedPatient = async () => {
+        if (!editingPatientId) return;
+        await supabase.from("patients").update({
+            full_name: patientEditForm.full_name,
+            age: patientEditForm.age ? Number(patientEditForm.age) : null,
+            sex: patientEditForm.sex,
+            phone: patientEditForm.phone || null,
+            clinical_notes: patientEditForm.clinical_notes || null,
+            labs: patientEditForm.labs || null,
+        }).eq("id", editingPatientId);
+        setEditingPatientId(null);
+        await loadPatients();
+    };
+
     const updateAppointmentStatus = async (id, status) => {
         await supabase.from("appointments").update({ status }).eq("id", id);
         await loadAppointments();
@@ -886,18 +935,15 @@ export default function CabinetDrHammachYassineV61() {
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-10">
             <div className="mx-auto max-w-7xl space-y-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                        <p className="mt-1 text-slate-600">Cabinet médical synchronisé</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
+                <div className="relative">
+                    <button className="absolute right-0 top-0 rounded-full border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700" onClick={() => setUser(null)}>Déconnexion</button>
+                    <h1 className="text-center text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
                         <NavButton active={activeTab === "consultation"} onClick={() => setActiveTab("consultation")}>Consultation</NavButton>
                         <NavButton active={activeTab === "agenda"} onClick={() => setActiveTab("agenda")}>Agenda partagé</NavButton>
                         <NavButton active={activeTab === "patients"} onClick={() => setActiveTab("patients")}>Fiches patients</NavButton>
                         <NavButton active={activeTab === "salle_attente"} onClick={() => setActiveTab("salle_attente")}>Salle d'attente</NavButton>
                         <NavButton active={activeTab === "patients_du_jour"} onClick={() => setActiveTab("patients_du_jour")}>Patients du jour</NavButton>
-                        <button className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setUser(null)}>Déconnexion</button>
                     </div>
                 </div>
 
@@ -1060,6 +1106,40 @@ export default function CabinetDrHammachYassineV61() {
                             <div className="mt-4"><SearchInput value={searchAppointments} onChange={setSearchAppointments} placeholder="Rechercher nom, téléphone ou motif" /></div>
                             <div className="mt-4 max-h-[70vh] overflow-auto pr-1">
                                 <AgendaView appointments={filteredAppointments} onStatusChange={updateAppointmentStatus} />
+                                <div className="mt-6 space-y-3">
+                                    {filteredAppointments.map((a) => (
+                                        <div key={a.id} className="rounded-2xl border border-slate-200 p-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="font-medium text-slate-900">{a.patient_name}</div>
+                                                    <div className="mt-1 text-sm text-slate-600">{a.appointment_date || "-"} {a.appointment_time || ""}</div>
+                                                    <div className="mt-1 text-sm text-slate-600">{a.reason || "-"}</div>
+                                                </div>
+                                                <button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs" onClick={() => startEditAppointment(a)}>Modifier</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {editingAppointmentId ? (
+                                    <div className="mt-6 rounded-2xl border border-slate-200 p-4">
+                                        <div className="mb-3 font-medium text-slate-900">Modifier le rendez-vous</div>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <input className={input} value={appointmentEditForm.patient_name} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, patient_name: e.target.value }))} placeholder="Nom du patient" />
+                                            <input className={input} value={appointmentEditForm.phone} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Téléphone" />
+                                            <input type="date" className={input} value={appointmentEditForm.appointment_date} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, appointment_date: e.target.value }))} />
+                                            <input type="time" className={input} value={appointmentEditForm.appointment_time} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, appointment_time: e.target.value }))} />
+                                        </div>
+                                        <div className="mt-4 grid gap-4">
+                                            <input className={input} value={appointmentEditForm.reason} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, reason: e.target.value }))} placeholder="Motif" />
+                                            <textarea className={`${input} min-h-24`} value={appointmentEditForm.notes} onChange={(e) => setAppointmentEditForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" />
+                                        </div>
+                                        <div className="mt-4 flex gap-3">
+                                            <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white" onClick={saveEditedAppointment}>Enregistrer</button>
+                                            <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setEditingAppointmentId(null)}>Annuler</button>
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         </section>
                     </div>
@@ -1078,21 +1158,47 @@ export default function CabinetDrHammachYassineV61() {
                                         <th className="py-2 pr-4">Sexe</th>
                                         <th className="py-2 pr-4">Téléphone</th>
                                         <th className="py-2 pr-4">Créé le</th>
+                                        <th className="py-2 pr-4">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredPatients.map((p) => (
-                                        <tr key={p.id} className="border-b border-slate-100">
+                                        <tr key={p.id} className="border-b border-slate-100 align-top">
                                             <td className="py-2 pr-4">{p.full_name}</td>
                                             <td className="py-2 pr-4">{p.age || "-"}</td>
                                             <td className="py-2 pr-4">{p.sex || "-"}</td>
                                             <td className="py-2 pr-4">{p.phone || "-"}</td>
                                             <td className="py-2 pr-4">{p.created_at ? new Date(p.created_at).toLocaleString("fr-FR") : "-"}</td>
+                                            <td className="py-2 pr-4"><button className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs" onClick={() => startEditPatient(p)}>Modifier</button></td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
+
+                        {editingPatientId ? (
+                            <div className="mt-6 rounded-2xl border border-slate-200 p-4">
+                                <div className="mb-3 font-medium text-slate-900">Modifier la fiche patient</div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <input className={input} value={patientEditForm.full_name} onChange={(e) => setPatientEditForm((p) => ({ ...p, full_name: e.target.value }))} placeholder="Nom complet" />
+                                    <input className={input} value={patientEditForm.phone} onChange={(e) => setPatientEditForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Téléphone" />
+                                    <input className={input} value={patientEditForm.age} onChange={(e) => setPatientEditForm((p) => ({ ...p, age: e.target.value }))} placeholder="Âge" />
+                                    <select className={input} value={patientEditForm.sex} onChange={(e) => setPatientEditForm((p) => ({ ...p, sex: e.target.value }))}>
+                                        <option value="">Sexe</option>
+                                        <option>Femme</option>
+                                        <option>Homme</option>
+                                    </select>
+                                </div>
+                                <div className="mt-4 grid gap-4">
+                                    <textarea className={`${input} min-h-24`} value={patientEditForm.clinical_notes} onChange={(e) => setPatientEditForm((p) => ({ ...p, clinical_notes: e.target.value }))} placeholder="Notes cliniques / évolution" />
+                                    <textarea className={`${input} min-h-24`} value={patientEditForm.labs} onChange={(e) => setPatientEditForm((p) => ({ ...p, labs: e.target.value }))} placeholder="Bilans / résultats / examens" />
+                                </div>
+                                <div className="mt-4 flex gap-3">
+                                    <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white" onClick={saveEditedPatient}>Enregistrer</button>
+                                    <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm" onClick={() => setEditingPatientId(null)}>Annuler</button>
+                                </div>
+                            </div>
+                        ) : null}
                     </section>
                 )}
 
