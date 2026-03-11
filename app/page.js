@@ -338,6 +338,60 @@ function computeClinicalSummary(form) {
     };
 }
 
+function generatePrescriptionSuggestions(selectedRecord) {
+    if (!selectedRecord) return [];
+    const topDx = selectedRecord.diagnoses?.[0]?.label || "";
+
+    const suggestions = {
+        "Cystite simple": [
+            "BU immédiate si non faite",
+            "Antibiothérapie probabiliste selon protocole du cabinet",
+            "Hydratation + réévaluation si fièvre ou douleur lombaire"
+        ],
+        "Pyélonéphrite": [
+            "BU + ECBU",
+            "Antibiothérapie adaptée au contexte clinique",
+            "Orientation urgente si vomissements, grossesse, sepsis ou obstacle"
+        ],
+        "Syndrome coronarien aigu": [
+            "ECG immédiat",
+            "Orientation urgente / service d'urgence",
+            "Ne pas laisser repartir le patient"
+        ],
+        "Appendicite aiguë": [
+            "NFS + CRP",
+            "Échographie / scanner selon disponibilité",
+            "Orientation chirurgicale si confirmation ou défense"
+        ],
+        "Œdème aigu pulmonaire": [
+            "Position assise",
+            "Oxygène si SpO₂ basse",
+            "Orientation urgente / prise en charge immédiate"
+        ],
+        "Grossesse extra-utérine": [
+            "β-HCG + échographie pelvienne",
+            "Orientation gynécologique urgente",
+            "Ne pas laisser repartir si douleur importante ou saignement"
+        ],
+        "Thrombose veineuse profonde": [
+            "Score de Wells",
+            "Écho-doppler veineux",
+            "Évaluer embolie pulmonaire associée"
+        ],
+        "Lombosciatique": [
+            "Examen neurologique complet",
+            "Rechercher syndrome de la queue de cheval",
+            "Traitement symptomatique selon protocole du cabinet"
+        ]
+    };
+
+    return suggestions[topDx] || [
+        "Corréler avec l'examen clinique",
+        "Adapter bilan et traitement au contexte du patient",
+        "Documenter la conduite dans les notes médecin"
+    ];
+}
+
 function MultiSelectChips({ options, selected, setSelected }) {
     const toggle = (option) => {
         setSelected(selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option]);
@@ -531,6 +585,7 @@ export default function CabinetDrHammachYassineV4() {
     }, [records, search]);
 
     const selectedRecord = useMemo(() => records.find((r) => r.id === selectedRecordId) || null, [records, selectedRecordId]);
+    const therapeuticSuggestions = useMemo(() => generatePrescriptionSuggestions(selectedRecord), [selectedRecord]);
 
     useEffect(() => {
         setDoctorNotesDraft(selectedRecord?.doctor_notes || "");
@@ -678,7 +733,7 @@ export default function CabinetDrHammachYassineV4() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-semibold text-slate-900">CABINET DR HAMMACH YASSINE</h1>
-                        <p className="mt-1 text-slate-600">V4 — assistant cabinet synchronisé, accès assistante limité, notes médecin et suivi renforcé</p>
+                        <p className="mt-1 text-slate-600">V5 — accès assistante limité, analyse clinique médecin, suggestions thérapeutiques et suivi renforcé</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {isDoctor ? (
@@ -773,6 +828,13 @@ export default function CabinetDrHammachYassineV4() {
                                                 {(selectedRecord.actions || []).length ? (selectedRecord.actions || []).map((a, i) => <li key={`${a}-${i}`}>{a}</li>) : <li>À compléter par l'examen clinique</li>}
                                             </ul>
                                         </div>
+                                    </div>
+
+                                    <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+                                        <div className="text-sm text-slate-500">Suggestions thérapeutiques / suite à donner</div>
+                                        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                            {therapeuticSuggestions.map((item, i) => <li key={`${item}-${i}`}>{item}</li>)}
+                                        </ul>
                                     </div>
 
                                     <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -906,17 +968,20 @@ export default function CabinetDrHammachYassineV4() {
                             </div>
                         </section>
 
-                        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h2 className="text-lg font-semibold">Notes V4</h2>
-                            <div className="mt-3 space-y-2 text-sm text-slate-700">
-                                <div>• Assistante limitée à la création de fiches</div>
-                                <div>• Médecin seul voit l'analyse clinique</div>
-                                <div>• PIN personnalisables via variables Vercel</div>
-                                <div>• Évite les doublons patients par téléphone / nom</div>
-                                <div>• Statut + date de visualisation médecin</div>
-                                <div>• Notes médecin enregistrées dans Supabase</div>
-                            </div>
-                        </section>
+                        {isDoctor ? (
+                            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold">Notes V5</h2>
+                                <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                    <div>• Assistante limitée strictement à la création de fiches</div>
+                                    <div>• Médecin seul voit l'analyse clinique et les suggestions</div>
+                                    <div>• PIN personnalisables via variables Vercel</div>
+                                    <div>• Évite les doublons patients par téléphone / nom</div>
+                                    <div>• Statut + date de visualisation médecin</div>
+                                    <div>• Notes médecin enregistrées dans Supabase</div>
+                                    <div>• Suggestions thérapeutiques visibles uniquement côté médecin</div>
+                                </div>
+                            </section>
+                        ) : null}
                     </aside>
                 </div>
             </div>
