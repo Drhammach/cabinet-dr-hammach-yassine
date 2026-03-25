@@ -1,32 +1,15 @@
-// app/api/clinical-assistant/route.js
-// CORRECTION: Modèle OpenAI + Sécurité
-// Vos données patients NE SONT PAS MODIFIÉES
+// app/api/clinical-assistant/route.js - VERSION PIN
 
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export async function POST(req) {
     try {
-        // 1. Vérifier session (sécurité)
-        const { data: { session }, error: authError } = await supabase.auth.getSession();
-        
-        if (authError || !session) {
-            return NextResponse.json(
-                { error: "Non authentifié" },
-                { status: 401 }
-            );
-        }
-
+        // 1. Récupérer le PIN depuis les headers ou body
         const body = await req.json();
         const { 
             patientId, 
@@ -35,10 +18,35 @@ export async function POST(req) {
             symptoms,
             constants,
             patientAge,
-            patientSexe 
+            patientSexe,
+            pin  // ← Ajoutez ceci dans le body envoyé par le frontend
         } = body;
 
-        // 2. Validation
+        // 2. Vérifier le PIN (à remplacer par votre logique)
+        // Option A: PIN statique (simple)
+        if (pin !== process.env.MEDECIN_PIN) {
+            return NextResponse.json(
+                { error: "PIN invalide" },
+                { status: 401 }
+            );
+        }
+
+        // Option B: Vérifier dans Supabase si vous stockez les sessions PIN
+        /*
+        const { data: session } = await supabase
+            .from('sessions_medecin')
+            .select('*')
+            .eq('pin', pin)
+            .eq('actif', true)
+            .gt('expire_a', new Date().toISOString())
+            .single();
+            
+        if (!session) {
+            return NextResponse.json({ error: "Session invalide" }, { status: 401 });
+        }
+        */
+
+        // 3. Validation données
         if (!patientId || !motif) {
             return NextResponse.json(
                 { error: "Données manquantes" },
@@ -46,30 +54,7 @@ export async function POST(req) {
             );
         }
 
-        // 3. Vérifier que le patient existe (lecture seule)
-        const { data: patient, error: patientError } = await supabase
-            .from('patients')
-            .select('id, consentement_analyse_ia')
-            .eq('id', patientId)
-            .single();
-
-        if (patientError || !patient) {
-            return NextResponse.json(
-                { error: "Patient non trouvé" },
-                { status: 404 }
-            );
-        }
-
-        // 4. Vérifier consentement (si vous avez ce champ)
-        if (patient.consentement_analyse_ia === false) {
-            return NextResponse.json(
-                { error: "Consentement patient requis" },
-                { status: 403 }
-            );
-        }
-
-        // 5. Anonymiser les données pour OpenAI
-        // ⚠️ ON ENVOIE PAS: nom, prénom, téléphone, adresse, email
+        // 4. Anonymiser les données pour OpenAI
         const anonymizedData = {
             age: patientAge,
             sexe: patientSexe,
@@ -83,9 +68,9 @@ export async function POST(req) {
             }
         };
 
-        // 6. Appel OpenAI - CORRECTION: gpt-4o au lieu de gpt-5.4
+        // 5. Appel OpenAI - CORRECTION: gpt-4o
         const response = await client.responses.create({
-            model: process.env.OPENAI_MODEL || "gpt-4o", // ✅ CORRIGÉ ICI
+            model: process.env.OPENAI_MODEL || "gpt-4o",
             input: [
                 {
                     role: "system",
@@ -155,18 +140,6 @@ FORMAT:
 
         const result = JSON.parse(response.output_text);
 
-        // 7. Sauvegarder l'analyse (NOUVELLE TABLE - n'existe pas encore)
-        // Si vous ne voulez pas sauvegarder, commentez cette partie
-        /*
-        await supabase.from('analyses_ia').insert({
-            consultation_id: consultationId,
-            medecin_id: session.user.id,
-            patient_id: patientId, // hashé ou masqué
-            resultat: result,
-            created_at: new Date().toISOString()
-        });
-        */
-
         return NextResponse.json({ 
             ok: true, 
             data: result,
@@ -175,8 +148,6 @@ FORMAT:
 
     } catch (error) {
         console.error("clinical-assistant error:", error);
-        
-        // Message générique pour ne pas exposer l'erreur interne
         return NextResponse.json(
             { error: "Erreur lors de l'analyse" },
             { status: 500 }
