@@ -1,9 +1,4 @@
-import OpenAI from "openai";
 import { NextResponse } from "next/server";
-
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
 
 const labels = {
     ordonnance: "Ordonnance médicale",
@@ -16,99 +11,135 @@ const labels = {
 export async function POST(req) {
     try {
         const body = await req.json();
-        
-        console.log("generate-medical-document body:", body);
-
-        // Format reçu du frontend:
-        // { documentType, patient: { nom, age, sexe, telephone }, consultation: {...}, notes, aiAnalysis }
-        const { documentType, patient, consultation, notes, aiAnalysis } = body;
+        const { documentType, patient, consultation, notes } = body;
 
         const validTypes = Object.keys(labels);
         if (!validTypes.includes(documentType)) {
             return NextResponse.json(
-                { ok: false, error: "Type de document invalide", validTypes },
+                { ok: false, error: "Type de document invalide" },
                 { status: 400 }
             );
         }
 
-        // Adapter au format attendu par l'IA
-        const anonymizedData = {
-            documentType,
-            patient: {
-                age: patient?.age,
-                sexe: patient?.sexe
-            },
-            consultation: {
-                motif: consultation?.motif || "",
-                constantes: {
-                    ta: consultation?.ta || "",
-                    fc: consultation?.fc || "",
-                    spo2: consultation?.spo2 || "",
-                    temperature: consultation?.temperature || ""
-                },
-                symptomes: "",
-                diagnostic: ""
-            },
-            notes_medecin: notes || "",
-            ai_analysis: aiAnalysis || null
+        const age = parseInt(patient?.age) || 0;
+        const sexe = patient?.sexe || "patient";
+        const motif = consultation?.motif || "consultation";
+        const date = new Date().toLocaleDateString('fr-FR');
+
+        // Templates de documents (sans OpenAI)
+        const templates = {
+            ordonnance: `ORDONNANCE MÉDICALE
+
+Date: ${date}
+
+Le/La patient(e), âgé(e) de ${age} ans, présente ${motif}.
+
+Médicaments prescrits:
+- [À compléter par le médecin]
+
+Posologie: [À compléter]
+
+Durée du traitement: [À compléter]
+
+Renouvellement: [À préciser]
+
+---
+Dr Hammach Yassine
+Médecin Généraliste`,
+
+            bilan: `BILAN / EXAMENS COMPLÉMENTAIRES
+
+Date: ${date}
+
+Patient: ${sexe} de ${age} ans
+Motif: ${motif}
+
+Examens demandés:
+- NFS, CRP
+- Ionogramme sanguin
+- Fonction rénale
+- [Autres examens à préciser]
+
+Imagerie:
+- [À compléter selon indication]
+
+Résultats à transmettre au cabinet.
+
+---
+Dr Hammach Yassine
+Médecin Généraliste`,
+
+            compte_rendu: `COMPTE RENDU DE CONSULTATION
+
+Date: ${date}
+
+Patient: ${sexe} de ${age} ans
+
+Motif de consultation: ${motif}
+
+Constantes:
+- TA: ${consultation?.ta || 'Non mesurée'}
+- FC: ${consultation?.fc || 'Non mesurée'}
+- SpO2: ${consultation?.spo2 || 'Non mesurée'}%
+- T°: ${consultation?.temperature || 'Non mesurée'}°C
+
+Examen clinique:
+[À compléter par le médecin]
+
+Conduite tenue:
+[À détailler]
+
+---
+Dr Hammach Yassine
+Médecin Généraliste`,
+
+            certificat: `CERTIFICAT MÉDICAL
+
+Je soussigné, Dr Hammach Yassine, médecin généraliste,
+
+certifie avoir examiné ce jour le/la patient(e) âgé(e) de ${age} ans.
+
+État général: [À compléter]
+Motif: ${motif}
+
+Ce certificat est délivré pour servir et valoir ce que de droit.
+
+Fait à [ville], le ${date}
+
+---
+Dr Hammach Yassine
+Médecin Généraliste`,
+
+            arret_travail: `ARRÊT DE TRAVAIL
+
+Je soussigné, Dr Hammach Yassine, médecin généraliste,
+
+déclare que l'état de santé du/de la patient(e) âgé(e) de ${age} ans,
+
+nécessite un arrêt de travail de [nombre] jour(s) à compter du ${date}.
+
+Motif: ${motif}
+
+Cet arrêt est délivré pour servir et valoir ce que de droit.
+
+---
+Dr Hammach Yassine
+Médecin Généraliste`
         };
-
-        const response = await client.responses.create({
-            model: process.env.OPENAI_MODEL || "gpt-4o",
-            input: [
-                {
-                    role: "system",
-                    content: `Tu es un assistant médical pour médecin généraliste.
-                    
-RÈGLES STRICTES:
-1. Rédige un document médical professionnel en français
-2. Utilise uniquement "Le patient" ou "La patiente" (PAS de nom/prénom)
-3. Mentionne l'âge si pertinent
-4. Inclus un avertissement légal obligatoire
-5. Ne remplace pas le jugement médical
-
-FORMAT JSON:
-{
-  "titre": "string",
-  "contenu": "string (texte complet)",
-  "avertissement": "Document généré par IA à titre indicatif. Validation médicale obligatoire."
-}`
-                },
-                {
-                    role: "user",
-                    content: `Document: ${labels[documentType]}\n\n${JSON.stringify(anonymizedData, null, 2)}`
-                }
-            ],
-            text: {
-                format: {
-                    type: "json_schema",
-                    name: "medical_document",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: {
-                            titre: { type: "string" },
-                            contenu: { type: "string" },
-                            avertissement: { type: "string" }
-                        },
-                        required: ["titre", "contenu", "avertissement"]
-                    }
-                }
-            }
-        });
-
-        const parsed = JSON.parse(response.output_text);
 
         return NextResponse.json({ 
             ok: true, 
-            data: parsed
+            data: {
+                titre: labels[documentType],
+                contenu: templates[documentType],
+                avertissement: "Document généré automatiquement. À compléter et valider par le médecin."
+            }
         });
 
     } catch (error) {
         console.error("generate-medical-document error:", error);
         return NextResponse.json(
-            { ok: false, error: "Erreur lors de la génération", details: error.message },
+            { ok: false, error: "Erreur lors de la génération" },
             { status: 500 }
         );
     }
