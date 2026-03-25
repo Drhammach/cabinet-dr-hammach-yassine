@@ -9,40 +9,32 @@ export async function POST(req) {
     try {
         const body = await req.json();
         
-        // Log pour déboguer - voir ce que le frontend envoie
         console.log("clinical-assistant body:", body);
 
-        const { 
-            patientId, 
-            consultationId,
-            motif,
-            symptoms,
-            constants,
-            patientAge,
-            patientSexe 
-        } = body;
+        // Format reçu du frontend:
+        // { patient: { nom, age, sexe, telephone }, consultation: { motif, ta, fc... }, notes }
+        const { patient, consultation, notes } = body;
 
-        // Validation plus souple - accepter motif OU symptoms
-        const symptomesOuMotif = motif || symptoms || "";
-        
-        if (!patientId || !symptomesOuMotif) {
+        if (!patient || !consultation) {
             return NextResponse.json(
-                { error: "Données manquantes: patientId et motif requis", received: body },
+                { error: "Données manquantes: patient et consultation requis", received: body },
                 { status: 400 }
             );
         }
 
+        // Adapter au format attendu par l'IA
         const anonymizedData = {
-            age: patientAge,
-            sexe: patientSexe,
-            motif: symptomesOuMotif,
-            symptoms: symptoms || "",
+            age: patient.age,
+            sexe: patient.sexe,
+            motif: consultation.motif,
+            symptoms: "", // Pas de champ symptoms séparé dans votre frontend
             constants: {
-                ta: constants?.ta || null,
-                fc: constants?.fc || null,
-                spo2: constants?.spo2 || null,
-                temperature: constants?.temperature || null
-            }
+                ta: consultation.ta || null,
+                fc: consultation.fc || null,
+                spo2: consultation.spo2 || null,
+                temperature: consultation.temperature || null
+            },
+            notes: notes || ""
         };
 
         const response = await client.responses.create({
@@ -116,9 +108,24 @@ FORMAT:
 
         const result = JSON.parse(response.output_text);
 
+        // Adapter la réponse au format attendu par le frontend
+        // Le frontend attend: resume_clinique, diagnostics_probables, diagnostics_graves_a_eliminer, etc.
+        const formattedResult = {
+            resume_clinique: `Patient ${patient.sexe} de ${patient.age} ans présentant ${consultation.motif}.`,
+            diagnostics_probables: result.top3.map(d => `${d.diagnostic} (score: ${d.score})`),
+            diagnostics_graves_a_eliminer: result.redFlags.slice(0, 3),
+            red_flags: result.redFlags,
+            bilans_recommandes: result.examens,
+            conduite_a_tenir: result.conduite ? [result.conduite] : [],
+            propositions_therapeutiques: ["À adapter selon diagnostic retenu"],
+            questions_utiles: ["Antécédents similaires?", "Traitement en cours?", "Allergies?"],
+            niveau_urgence: result.niveauUrgence,
+            avertissement: "Cette analyse est générée par IA et ne remplace pas le jugement médical."
+        };
+
         return NextResponse.json({ 
             ok: true, 
-            data: result,
+            data: formattedResult,
             warning: "Analyse IA indicative - validation médicale requise"
         });
 
