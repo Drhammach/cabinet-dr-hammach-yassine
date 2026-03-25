@@ -17,19 +17,11 @@ export async function POST(req) {
     try {
         const body = await req.json();
         
-        // Log pour déboguer
         console.log("generate-medical-document body:", body);
 
-        const { 
-            documentType, 
-            patientAge, 
-            patientSexe, 
-            motif, 
-            constants, 
-            symptoms, 
-            diagnostic, 
-            notes = "" 
-        } = body;
+        // Format reçu du frontend:
+        // { documentType, patient: { nom, age, sexe, telephone }, consultation: {...}, notes, aiAnalysis }
+        const { documentType, patient, consultation, notes, aiAnalysis } = body;
 
         const validTypes = Object.keys(labels);
         if (!validTypes.includes(documentType)) {
@@ -39,20 +31,26 @@ export async function POST(req) {
             );
         }
 
-        // Données pour l'IA
+        // Adapter au format attendu par l'IA
         const anonymizedData = {
             documentType,
             patient: {
-                age: patientAge,
-                sexe: patientSexe
+                age: patient?.age,
+                sexe: patient?.sexe
             },
             consultation: {
-                motif: motif || "",
-                constantes: constants || {},
-                symptomes: symptoms || "",
-                diagnostic: diagnostic || ""
+                motif: consultation?.motif || "",
+                constantes: {
+                    ta: consultation?.ta || "",
+                    fc: consultation?.fc || "",
+                    spo2: consultation?.spo2 || "",
+                    temperature: consultation?.temperature || ""
+                },
+                symptomes: "",
+                diagnostic: ""
             },
-            notes_medecin: notes
+            notes_medecin: notes || "",
+            ai_analysis: aiAnalysis || null
         };
 
         const response = await client.responses.create({
