@@ -1,5 +1,3 @@
-// app/api/clinical-assistant/route.js - VERSION PIN
-
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
@@ -9,8 +7,11 @@ const client = new OpenAI({
 
 export async function POST(req) {
     try {
-        // 1. Récupérer le PIN depuis les headers ou body
         const body = await req.json();
+        
+        // Log pour déboguer - voir ce que le frontend envoie
+        console.log("clinical-assistant body:", body);
+
         const { 
             patientId, 
             consultationId,
@@ -18,47 +19,23 @@ export async function POST(req) {
             symptoms,
             constants,
             patientAge,
-            patientSexe,
-            pin  // ← Ajoutez ceci dans le body envoyé par le frontend
+            patientSexe 
         } = body;
 
-        // 2. Vérifier le PIN (à remplacer par votre logique)
-        // Option A: PIN statique (simple)
-        if (pin !== process.env.MEDECIN_PIN) {
+        // Validation plus souple - accepter motif OU symptoms
+        const symptomesOuMotif = motif || symptoms || "";
+        
+        if (!patientId || !symptomesOuMotif) {
             return NextResponse.json(
-                { error: "PIN invalide" },
-                { status: 401 }
-            );
-        }
-
-        // Option B: Vérifier dans Supabase si vous stockez les sessions PIN
-        /*
-        const { data: session } = await supabase
-            .from('sessions_medecin')
-            .select('*')
-            .eq('pin', pin)
-            .eq('actif', true)
-            .gt('expire_a', new Date().toISOString())
-            .single();
-            
-        if (!session) {
-            return NextResponse.json({ error: "Session invalide" }, { status: 401 });
-        }
-        */
-
-        // 3. Validation données
-        if (!patientId || !motif) {
-            return NextResponse.json(
-                { error: "Données manquantes" },
+                { error: "Données manquantes: patientId et motif requis", received: body },
                 { status: 400 }
             );
         }
 
-        // 4. Anonymiser les données pour OpenAI
         const anonymizedData = {
             age: patientAge,
             sexe: patientSexe,
-            motif: motif,
+            motif: symptomesOuMotif,
             symptoms: symptoms || "",
             constants: {
                 ta: constants?.ta || null,
@@ -68,7 +45,6 @@ export async function POST(req) {
             }
         };
 
-        // 5. Appel OpenAI - CORRECTION: gpt-4o
         const response = await client.responses.create({
             model: process.env.OPENAI_MODEL || "gpt-4o",
             input: [
@@ -149,7 +125,7 @@ FORMAT:
     } catch (error) {
         console.error("clinical-assistant error:", error);
         return NextResponse.json(
-            { error: "Erreur lors de l'analyse" },
+            { error: "Erreur lors de l'analyse", details: error.message },
             { status: 500 }
         );
     }
