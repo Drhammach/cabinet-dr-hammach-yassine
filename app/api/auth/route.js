@@ -1,4 +1,4 @@
-// app/api/auth/route.js - VERSION SANS JWT
+// app/api/auth/route.js - CORRIGÉ
 import { NextResponse } from 'next/server';
 
 const SECRET = process.env.AUTH_SECRET || 'votre-secret-tres-long-minimum-32-caracteres';
@@ -15,6 +15,16 @@ const USERS = {
     role: "medecin" 
   }
 };
+
+// Fonction utilitaire pour créer la signature (doit être exportée ou partagée)
+async function createSignature(timestamp, role, name) {
+  const data = `${timestamp}:${role}:${name}:${SECRET}`;
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+}
 
 export async function POST(request) {
   try {
@@ -44,12 +54,14 @@ export async function POST(request) {
       user: { role: user.role, name: user.name } 
     });
     
+    // COOKIE CORRIGÉ - sameSite: 'lax' au lieu de 'strict'
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 8 * 60 * 60,
-      path: '/'
+      secure: true, // Toujours true en production Vercel (HTTPS)
+      sameSite: 'lax', // ← CHANGÉ : 'lax' permet les requêtes same-site plus permissives
+      maxAge: 8 * 60 * 60, // 8 heures en secondes
+      path: '/',
+      // domain: '.vercel.app' // ← DÉCOMMENTEZ si vous avez des soucis de domaine
     });
 
     return response;
@@ -91,4 +103,17 @@ export async function GET(request) {
     const expectedSignature = await createSignature(timestamp, role, name);
     if (signature !== expectedSignature) {
       throw new Error('Signature invalide');
-   
+    }
+
+    return NextResponse.json({ 
+      ok: true, 
+      user: { role, name } 
+    });
+    
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Session invalide" }, 
+      { status: 401 }
+    );
+  }
+}
