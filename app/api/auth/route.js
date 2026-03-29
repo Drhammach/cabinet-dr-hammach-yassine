@@ -35,7 +35,6 @@ export async function POST(request) {
       );
     }
 
-    // Créer token simple (timestamp:role:name:signature)
     const timestamp = Date.now();
     const signature = await createSignature(timestamp, user.role, user.name);
     const token = `${timestamp}:${user.role}:${user.name}:${signature}`;
@@ -49,7 +48,7 @@ export async function POST(request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 8 * 60 * 60, // 8 heures
+      maxAge: 8 * 60 * 60,
       path: '/'
     });
 
@@ -84,34 +83,12 @@ export async function GET(request) {
       throw new Error('Token invalide');
     }
 
-    // Vérifier expiration
     const tokenAge = Date.now() - parseInt(timestamp);
     if (tokenAge > 8 * 60 * 60 * 1000) {
       throw new Error('Token expiré');
     }
 
-    // Vérifier signature
     const expectedSignature = await createSignature(timestamp, role, name);
     if (signature !== expectedSignature) {
       throw new Error('Signature invalide');
-    }
-
-    return NextResponse.json({ 
-      ok: true, 
-      user: { role, name } 
-    });
-    
-  } catch {
-    return NextResponse.json({ error: "Session invalide" }, { status: 401 });
-  }
-}
-
-async function createSignature(timestamp, role, name) {
-  const data = `${timestamp}:${role}:${name}:${SECRET}`;
-  const encoder = new TextEncoder();
-  const dataBuffer = encoder.encode(data);
-  
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
-}
+   
