@@ -1,5 +1,6 @@
+// app/layout.js - VERSION CORRIGÉE
 import { Geist, Geist_Mono } from "next/font/google";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider } from "../lib/auth";
 import "./globals.css";
 
 const geistSans = Geist({
