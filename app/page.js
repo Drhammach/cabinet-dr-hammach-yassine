@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/lib/auth";
-
+import { useAuth } from "../lib/auth";
 const symptomCatalog = [
     "Douleur thoracique",
     "Dyspnée",
