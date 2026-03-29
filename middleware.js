@@ -1,8 +1,9 @@
+// middleware.js - VERSION CORRIGÉE (simplifiée)
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'votre-secret-tres-long-et-complexe-minimum-32-caracteres'
+  process.env.JWT_SECRET || 'votre-secret-par-defaut-tres-long-32-caracteres-min'
 );
 
 const PUBLIC_ROUTES = ['/api/auth'];
@@ -18,7 +19,7 @@ export async function middleware(request) {
   
   if (!token) {
     return NextResponse.json(
-      { error: "Non authentifié. Veuillez vous connecter." }, 
+      { error: "Non authentifié" }, 
       { status: 401 }
     );
   }
@@ -36,7 +37,7 @@ export async function middleware(request) {
     
   } catch (error) {
     return NextResponse.json(
-      { error: "Session invalide ou expirée" }, 
+      { error: "Session invalide" }, 
       { status: 401 }
     );
   }
