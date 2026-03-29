@@ -1,18 +1,19 @@
+// app/api/auth/route.js - VERSION CORRIGÉE
 import { NextResponse } from 'next/server';
 import { SignJWT, jwtVerify } from 'jose';
 
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'votre-secret-tres-long-et-complexe-minimum-32-caracteres'
+  process.env.JWT_SECRET || 'votre-secret-par-defaut-tres-long-32-caracteres-min'
 );
 
 const USERS = {
   assistante: { 
-    pin: process.env.ASSISTANTE_PIN, 
+    pin: process.env.ASSISTANTE_PIN || '1234', 
     name: "Assistante", 
     role: "assistante" 
   },
   medecin: { 
-    pin: process.env.MEDECIN_PIN, 
+    pin: process.env.MEDECIN_PIN || '2026', 
     name: "Dr Hammach Yassine", 
     role: "medecin" 
   }
