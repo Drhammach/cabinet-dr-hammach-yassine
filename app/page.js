@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/lib/auth";
 
 const symptomCatalog = [
     "Douleur thoracique",
@@ -65,14 +66,6 @@ const appointmentStatusOptions = [
     { value: "honore", label: "Honoré" },
     { value: "annule", label: "Annulé" },
 ];
-
-const ASSISTANTE_PIN = process.env.NEXT_PUBLIC_ASSISTANTE_PIN || "1234";
-const MEDECIN_PIN = process.env.NEXT_PUBLIC_MEDECIN_PIN || "2026";
-
-const demoUsers = {
-    assistante: { role: "assistante", name: "Assistante", pin: ASSISTANTE_PIN },
-    medecin: { role: "medecin", name: "Dr Hammach Yassine", pin: MEDECIN_PIN },
-};
 
 const emptyForm = {
     fullName: "",
@@ -552,19 +545,24 @@ function AgendaView({ appointments, onStatusChange }) {
     );
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen() {
+    const { login } = useAuth();
     const [role, setRole] = useState("assistante");
     const [pin, setPin] = useState("");
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const submit = () => {
-        const user = demoUsers[role];
-        if (pin === user.pin) {
-            setError("");
-            onLogin(user);
-        } else {
-            setError("Code PIN incorrect");
+    const submit = async () => {
+        setLoading(true);
+        setError("");
+        
+        const result = await login(role, pin);
+        
+        if (!result.ok) {
+            setError(result.error || "Erreur de connexion");
         }
+        
+        setLoading(false);
     };
 
     return (
@@ -577,7 +575,11 @@ function LoginScreen({ onLogin }) {
                 <div className="mt-6 space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700">Rôle</label>
-                        <select className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
+                        <select 
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" 
+                            value={role} 
+                            onChange={(e) => setRole(e.target.value)}
+                        >
                             <option value="assistante">Assistante</option>
                             <option value="medecin">Médecin</option>
                         </select>
@@ -591,13 +593,22 @@ function LoginScreen({ onLogin }) {
                             value={pin}
                             onChange={(e) => setPin(e.target.value)}
                             placeholder="Code PIN"
+                            onKeyDown={(e) => e.key === 'Enter' && submit()}
                         />
                     </div>
 
-                    {error ? <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
+                    {error ? (
+                        <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {error}
+                        </div>
+                    ) : null}
 
-                    <button className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white" onClick={submit}>
-                        Se connecter
+                    <button 
+                        className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white disabled:opacity-50"
+                        onClick={submit}
+                        disabled={loading || !pin}
+                    >
+                        {loading ? "Connexion..." : "Se connecter"}
                     </button>
                 </div>
             </div>
@@ -638,7 +649,7 @@ function PatientCard({ p, onOpen, canSeeClinical }) {
 }
 
 export default function CabinetDrHammachYassineV8() {
-    const [user, setUser] = useState(null);
+    const { user, logout, loading: authLoading, isDoctor } = useAuth();
     const [activeTab, setActiveTab] = useState("consultation");
 
     const [form, setForm] = useState(emptyForm);
@@ -700,33 +711,52 @@ export default function CabinetDrHammachYassineV8() {
     const updateAppointment = (key, value) => setAppointmentForm((prev) => ({ ...prev, [key]: value }));
 
     const summary = useMemo(() => computeClinicalSummary(form), [form]);
-    const isDoctor = user?.role === "medecin";
 
     const loadRecords = async () => {
-        const res = await fetch("/api/data/triage-forms");
-        const json = await res.json();
-        if (json.ok) {
-            setRecords(json.data || []);
-            if (!selectedRecordId && json.data?.[0]) setSelectedRecordId(json.data[0].id);
+        try {
+            const res = await fetch("/api/data/triage-forms");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.ok) {
+                setRecords(json.data || []);
+                if (!selectedRecordId && json.data?.[0]) setSelectedRecordId(json.data[0].id);
+            }
+        } catch (err) {
+            console.error("Erreur chargement records:", err);
         }
     };
 
     const loadPatients = async () => {
-        const res = await fetch("/api/data/patients");
-        const json = await res.json();
-        if (json.ok) setPatients(json.data || []);
+        try {
+            const res = await fetch("/api/data/patients");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.ok) setPatients(json.data || []);
+        } catch (err) {
+            console.error("Erreur chargement patients:", err);
+        }
     };
 
     const loadAppointments = async () => {
-        const res = await fetch("/api/data/appointments");
-        const json = await res.json();
-        if (json.ok) setAppointments(json.data || []);
+        try {
+            const res = await fetch("/api/data/appointments");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.ok) setAppointments(json.data || []);
+        } catch (err) {
+            console.error("Erreur chargement rendez-vous:", err);
+        }
     };
 
     const loadWaitingRoom = async () => {
-        const res = await fetch("/api/data/waiting-room");
-        const json = await res.json();
-        if (json.ok) setWaitingRoom(json.data || []);
+        try {
+            const res = await fetch("/api/data/waiting-room");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.ok) setWaitingRoom(json.data || []);
+        } catch (err) {
+            console.error("Erreur chargement salle d'attente:", err);
+        }
     };
 
     const loadAll = async () => {
@@ -737,7 +767,7 @@ export default function CabinetDrHammachYassineV8() {
 
     useEffect(() => {
         loadAll();
-        const interval = setInterval(loadAll, 4000);
+        const interval = setInterval(loadAll, 30000); // 30 secondes au lieu de 4
         return () => clearInterval(interval);
     }, []);
 
@@ -840,38 +870,44 @@ export default function CabinetDrHammachYassineV8() {
             return;
         }
 
-        const res = await fetch("/api/data/appointments", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                patient_name: appointmentForm.patientName,
-                phone: appointmentForm.phone || null,
-                appointment_date: appointmentForm.date || null,
-                appointment_time: appointmentForm.time || null,
-                reason: appointmentForm.reason || null,
-                notes: appointmentForm.notes || null,
-                status: "planifie",
-                created_by: user?.name || "",
-            }),
-        });
+        try {
+            const res = await fetch("/api/data/appointments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    patient_name: appointmentForm.patientName,
+                    phone: appointmentForm.phone || null,
+                    appointment_date: appointmentForm.date || null,
+                    appointment_time: appointmentForm.time || null,
+                    reason: appointmentForm.reason || null,
+                    notes: appointmentForm.notes || null,
+                    status: "planifie",
+                    created_by: user?.name || "",
+                }),
+            });
 
-        const json = await res.json();
-        if (!json.ok) {
+            const json = await res.json();
+            if (!json.ok) throw new Error("Erreur");
+
+            setAppointmentForm(emptyAppointment);
+            await loadAppointments();
+        } catch (err) {
+            console.error(err);
             alert("Erreur lors de l'enregistrement du rendez-vous");
-            return;
         }
-
-        setAppointmentForm(emptyAppointment);
-        await loadAppointments();
     };
 
     const updateAppointmentStatus = async (id, status) => {
-        await fetch(`/api/data/appointments/${id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status }),
-        });
-        await loadAppointments();
+        try {
+            await fetch(`/api/data/appointments/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status }),
+            });
+            await loadAppointments();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const startEditAppointment = (appt) => {
@@ -889,14 +925,18 @@ export default function CabinetDrHammachYassineV8() {
     const saveEditedAppointment = async () => {
         if (!editingAppointmentId) return;
 
-        await fetch(`/api/data/appointments/${editingAppointmentId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(appointmentEditForm),
-        });
+        try {
+            await fetch(`/api/data/appointments/${editingAppointmentId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(appointmentEditForm),
+            });
 
-        setEditingAppointmentId(null);
-        await loadAppointments();
+            setEditingAppointmentId(null);
+            await loadAppointments();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const startEditPatient = (p) => {
@@ -914,51 +954,63 @@ export default function CabinetDrHammachYassineV8() {
     const saveEditedPatient = async () => {
         if (!editingPatientId) return;
 
-        await fetch(`/api/data/patients/${editingPatientId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                full_name: patientEditForm.full_name,
-                age: patientEditForm.age ? Number(patientEditForm.age) : null,
-                sex: patientEditForm.sex,
-                phone: patientEditForm.phone || null,
-                clinical_notes: patientEditForm.clinical_notes || null,
-                labs: patientEditForm.labs || null,
-            }),
-        });
+        try {
+            await fetch(`/api/data/patients/${editingPatientId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    full_name: patientEditForm.full_name,
+                    age: patientEditForm.age ? Number(patientEditForm.age) : null,
+                    sex: patientEditForm.sex,
+                    phone: patientEditForm.phone || null,
+                    clinical_notes: patientEditForm.clinical_notes || null,
+                    labs: patientEditForm.labs || null,
+                }),
+            });
 
-        setEditingPatientId(null);
-        await loadPatients();
+            setEditingPatientId(null);
+            await loadPatients();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const updateWaitingStatus = async (id, room_status) => {
-        if (room_status === "sorti") {
-            await fetch(`/api/data/waiting-room/${id}`, { method: "DELETE" });
-        } else {
-            await fetch(`/api/data/waiting-room/${id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ room_status }),
-            });
+        try {
+            if (room_status === "sorti") {
+                await fetch(`/api/data/waiting-room/${id}`, { method: "DELETE" });
+            } else {
+                await fetch(`/api/data/waiting-room/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ room_status }),
+                });
+            }
+            await loadWaitingRoom();
+        } catch (err) {
+            console.error(err);
         }
-        await loadWaitingRoom();
     };
 
     const updateConsultationStatus = async (recordId, status) => {
         if (!isDoctor) return;
 
-        await fetch(`/api/data/triage-forms/${recordId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                status,
-                seen_by_doctor_at:
-                    status === "vu" || status === "termine" ? new Date().toISOString() : null,
-            }),
-        });
+        try {
+            await fetch(`/api/data/triage-forms/${recordId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    status,
+                    seen_by_doctor_at:
+                        status === "vu" || status === "termine" ? new Date().toISOString() : null,
+                }),
+            });
 
-        await loadRecords();
-        setSelectedRecordId(recordId);
+            await loadRecords();
+            setSelectedRecordId(recordId);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const saveDoctorNotes = async () => {
@@ -974,6 +1026,8 @@ export default function CabinetDrHammachYassineV8() {
             });
 
             await loadRecords();
+        } catch (err) {
+            console.error(err);
         } finally {
             setSavingDoctorNotes(false);
         }
@@ -1085,7 +1139,15 @@ export default function CabinetDrHammachYassineV8() {
         }
     };
 
-    if (!user) return <LoginScreen onLogin={setUser} />;
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-slate-500">Chargement...</div>
+            </div>
+        );
+    }
+    
+    if (!user) return <LoginScreen />;
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 p-6 md:p-10">
@@ -1093,7 +1155,7 @@ export default function CabinetDrHammachYassineV8() {
                 <div className="relative">
                     <button
                         className="absolute right-0 top-0 rounded-full border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700"
-                        onClick={() => setUser(null)}
+                        onClick={logout}
                     >
                         Déconnexion
                     </button>
