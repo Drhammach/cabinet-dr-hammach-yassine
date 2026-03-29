@@ -1,10 +1,7 @@
-// app/api/auth/route.js - VERSION CORRIGÉE
+// app/api/auth/route.js - VERSION SANS JWT
 import { NextResponse } from 'next/server';
-import { SignJWT, jwtVerify } from 'jose';
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'votre-secret-par-defaut-tres-long-32-caracteres-min'
-);
+const SECRET = process.env.AUTH_SECRET || 'votre-secret-tres-long-minimum-32-caracteres';
 
 const USERS = {
   assistante: { 
@@ -38,14 +35,10 @@ export async function POST(request) {
       );
     }
 
-    const token = await new SignJWT({ 
-      role: user.role, 
-      name: user.name,
-      iat: Date.now() 
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('8h')
-      .sign(SECRET);
+    // Créer token simple (timestamp:role:name:signature)
+    const timestamp = Date.now();
+    const signature = await createSignature(timestamp, user.role, user.name);
+    const token = `${timestamp}:${user.role}:${user.name}:${signature}`;
 
     const response = NextResponse.json({ 
       ok: true, 
@@ -56,7 +49,7 @@ export async function POST(request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 8 * 60 * 60,
+      maxAge: 8 * 60 * 60, // 8 heures
       path: '/'
     });
 
@@ -85,14 +78,40 @@ export async function GET(request) {
       return NextResponse.json({ error: "Non connecté" }, { status: 401 });
     }
 
-    const { payload } = await jwtVerify(token, SECRET);
+    const [timestamp, role, name, signature] = token.split(':');
     
+    if (!timestamp || !role || !name || !signature) {
+      throw new Error('Token invalide');
+    }
+
+    // Vérifier expiration
+    const tokenAge = Date.now() - parseInt(timestamp);
+    if (tokenAge > 8 * 60 * 60 * 1000) {
+      throw new Error('Token expiré');
+    }
+
+    // Vérifier signature
+    const expectedSignature = await createSignature(timestamp, role, name);
+    if (signature !== expectedSignature) {
+      throw new Error('Signature invalide');
+    }
+
     return NextResponse.json({ 
       ok: true, 
-      user: { role: payload.role, name: payload.name } 
+      user: { role, name } 
     });
     
   } catch {
     return NextResponse.json({ error: "Session invalide" }, { status: 401 });
   }
+}
+
+async function createSignature(timestamp, role, name) {
+  const data = `${timestamp}:${role}:${name}:${SECRET}`;
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
 }
