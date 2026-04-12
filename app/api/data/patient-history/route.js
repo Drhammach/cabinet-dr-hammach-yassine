@@ -1,19 +1,17 @@
-// app/api/data/patient-history/route.ts
+// app/api/data/patient-history/route.js  ← .js pas .ts
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     auth: { autoRefreshToken: false, persistSession: false }
   }
 );
 
-function verifyAuth(request: Request) {
-  const cookieHeader = request.headers.get('cookie') || '';
-  const tokenMatch = cookieHeader.match(/auth-token=([^;]+)/);
-  const token = tokenMatch ? tokenMatch[1] : null;
+function verifyAuth(request) {
+  const token = request.cookies.get('auth-token')?.value;
   
   if (!token) {
     return { error: "Non authentifié", status: 401, code: "NO_TOKEN" };
@@ -30,7 +28,7 @@ function verifyAuth(request: Request) {
   };
 }
 
-export async function GET(request: Request) {
+export async function GET(request) {
   const auth = verifyAuth(request);
   
   if (auth.error) {
@@ -97,8 +95,7 @@ export async function GET(request: Request) {
     const { data, error } = await query.limit(500);
     if (error) throw error;
 
-    // Enrichir les données
-    const enrichedData = (data || []).map((record: any) => ({
+    const enrichedData = (data || []).map((record) => ({
       ...record,
       patient_age: record.patients?.age || null,
       resume_clinique: [
@@ -111,11 +108,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ 
       ok: true, 
       data: enrichedData,
-      count: enrichedData.length,
-      filters: { patientId, from, to, status }
+      count: enrichedData.length
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET patient-history error:", error);
     return NextResponse.json(
       { ok: false, error: "Erreur serveur", detail: error.message },
