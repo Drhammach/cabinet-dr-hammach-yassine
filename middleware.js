@@ -1,10 +1,18 @@
-// middleware.js - VERSION CORRIGÉE COMPLÈTE
+// middleware.js - VERSION FINALE CORRIGÉE
 import { NextResponse } from 'next/server';
 
-const PUBLIC_ROUTES = ['/api/auth', '/api/health', '/api/test-auth'];
+const PUBLIC_ROUTES = [
+  '/api/auth',
+  '/api/health',
+  '/api/test-auth',
+  '/_next',
+  '/favicon.ico',
+  '/login',
+  '/debug'
+];
+
 const SECRET = process.env.AUTH_SECRET || 'votre-secret-tres-long-minimum-32-caracteres';
 
-// Fonction IDENTIQUE à celle de auth/route.js
 async function createSignature(timestamp, role, name) {
   const data = `${timestamp}:${role}:${name}:${SECRET}`;
   const encoder = new TextEncoder();
@@ -17,66 +25,73 @@ async function createSignature(timestamp, role, name) {
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
   
-  // Routes publiques (pas d'authentification requise)
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+  // Routes publiques - pas d'authentification
+  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route) || pathname === route)) {
     return NextResponse.next();
   }
 
-  // Récupérer le token du cookie
+  // Vérifier si c'est une route API
+  if (!pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
+  // Récupérer le token
   const token = request.cookies.get('auth-token')?.value;
   
   if (!token) {
-    console.log(`[Middleware] ❌ Pas de token pour ${pathname}`);
+    console.log(`[Middleware] ❌ 401 NO_TOKEN for ${pathname}`);
     return NextResponse.json(
-      { error: "Non authentifié", code: "NO_TOKEN" }, 
+      { error: "Non authentifié", code: "NO_TOKEN", path: pathname }, 
       { status: 401 }
     );
   }
 
   try {
-    // Parser le token : timestamp:role:name:signature
     const parts = token.split(':');
     if (parts.length !== 4) {
-      throw new Error(`Format invalide: ${parts.length} parties au lieu de 4`);
+      throw new Error(`Format invalide: ${parts.length} parties`);
     }
     
     const [timestamp, role, name, signature] = parts;
     
-    // Vérifier que toutes les parties existent
     if (!timestamp || !role || !name || !signature) {
       throw new Error('Token incomplet');
     }
 
     // Vérifier expiration (8 heures)
     const tokenAge = Date.now() - parseInt(timestamp);
-    const maxAge = 8 * 60 * 60 * 1000; // 8 heures en ms
+    const maxAge = 8 * 60 * 60 * 1000;
     
     if (tokenAge > maxAge) {
-      throw new Error(`Token expiré depuis ${Math.round(tokenAge/1000/60)} minutes`);
+      throw new Error(`Token expiré`);
     }
 
-    // Vérifier la signature
+    // Vérifier signature
     const expectedSignature = await createSignature(timestamp, role, name);
     if (signature !== expectedSignature) {
-      throw new Error('Signature invalide - AUTH_SECRET différent ?');
+      console.log(`[Middleware] ❌ Signature mismatch`);
+      console.log(`  Attendu: ${expectedSignature}`);
+      console.log(`  Reçu: ${signature}`);
+      throw new Error('Signature invalide');
     }
 
-    // Succès : ajouter infos utilisateur aux headers
+    // Succès - ajouter headers pour les routes API
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-role', role);
-    requestHeaders.set('x-user-name', name);
+    requestHeaders.set('x-user-name', decodeURIComponent(name));
+    requestHeaders.set('x-auth-verified', 'true');
     
-    console.log(`[Middleware] ✅ OK - ${pathname} | ${role} | ${name}`);
-    
+    console.log(`[Middleware] ✅ OK ${pathname} | ${role}`);
+
     return NextResponse.next({
       request: { headers: requestHeaders }
     });
     
   } catch (error) {
-    console.error(`[Middleware] ❌ ${pathname}:`, error.message);
+    console.error(`[Middleware] ❌ 401 INVALID_TOKEN for ${pathname}:`, error.message);
     return NextResponse.json(
       { 
-        error: "Session invalide", 
+        error: "Session invalide ou expirée", 
         code: "INVALID_TOKEN",
         detail: process.env.NODE_ENV === 'development' ? error.message : undefined
       }, 
